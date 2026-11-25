@@ -1,7 +1,12 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "swarm"
-version = "0.1.0"
-description = "Free-first CrewAI swarm harness (009) — implements specs task-by-task"
+name = "handleman-hq"
+version = "0.2.0"
+description = "The dark factory: a spec-driven, model-agnostic agent swarm for any repo"
+readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "crewai[litellm]",
@@ -22,12 +27,14 @@ dev = [
     "mypy",
 ]
 
+[project.scripts]
+hq = "swarm.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/swarm"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
-# This is a dependency-only install (`swarm[dev]`); the harness is imported as
-# `swarm.*` from the repo root. Stop setuptools flat-layout discovery from
-# treating source dirs (docker/, ollama/) as packages.
-[tool.setuptools]
-packages = []
-py-modules = []
+[tool.ruff]
+line-length = 100
