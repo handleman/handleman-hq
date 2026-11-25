@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import swarm
 from swarm import llms
 
 
@@ -67,6 +68,6 @@ def test_an_accepted_hint_is_recorded(monkeypatch):
 def test_run_json_records_the_cache_decision():
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert '"cache": {' in source
     assert '"cached_prompt_tokens": self.state.cached_prompt_tokens' in source

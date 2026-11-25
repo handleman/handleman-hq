@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import swarm
 from swarm import verify
 
 
@@ -37,7 +38,7 @@ def test_a_big_or_wide_docs_delta_is_not_low_risk():
 
 
 def test_the_flow_skips_and_records_the_reason():
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert "verify.lean_enabled() and self._lean_delta()" in source
     assert '"verdict": "skipped"' in source
     assert "skipped_reason" in source

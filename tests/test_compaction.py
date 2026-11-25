@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import swarm
 from swarm import compaction
 from swarm.evidence import qa_report, report_text, split_tails
 
@@ -169,7 +170,7 @@ def test_flow_state_carries_the_compaction_record():
     state = SwarmState()
     assert state.compaction == {}
     # the run payload is the source the operator reads the record from
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert '"compaction": self.state.compaction' in source
 
 

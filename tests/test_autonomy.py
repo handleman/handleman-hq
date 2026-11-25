@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import swarm
 from swarm import risk
 
 
@@ -43,7 +44,7 @@ def test_there_is_no_autonomy_switch():
 
     `--require-approval` is a per-run flag for a deliberate look, not a mode.
     """
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert "SWARM_AUTONOMY" not in source
     assert "SWARM_REQUIRE_APPROVAL" not in source
     assert 'payload["risk"] = risk.record' in source
@@ -51,7 +52,7 @@ def test_there_is_no_autonomy_switch():
 
 
 def test_a_green_run_is_never_held_without_the_flag():
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert "elif self._require_approval and not approved:" in source
     assert 'and not autonomy["' not in source
 

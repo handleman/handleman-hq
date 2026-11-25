@@ -6,6 +6,7 @@ import time
 import types
 from pathlib import Path
 
+import swarm
 from swarm import verify
 from swarm.flow import SwarmFlow
 
@@ -84,7 +85,7 @@ def test_a_verifier_crash_is_advisory_not_a_run_failure():
 
 
 def test_the_flow_only_overlaps_when_enabled_and_corrections_stay_sequential():
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert "_verify.enabled() and _verify.concurrent_enabled()" in source
     assert "self._verify_concurrently(" in source
     # formatting runs before the thread starts

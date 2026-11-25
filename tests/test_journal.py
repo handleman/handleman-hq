@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import swarm
 from swarm.journal import Journal
 
 
@@ -89,7 +90,7 @@ def test_runs_are_isolated(tmp_path: Path):
 
 
 def test_the_flow_uses_the_journal_for_steps_and_commit_effects():
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert "Journal(" in source
     assert "complete_step(" in source
     assert "commit:" in source  # effect key

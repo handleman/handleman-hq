@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import swarm
 from swarm import artifacts
 
 
@@ -54,7 +55,7 @@ def test_non_test_python_may_contain_no_tests(tmp_path: Path):
 
 
 def test_the_self_check_adds_the_artifact_check():
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert "artifacts.incomplete(" in source
     assert 'codes["harness: artifacts"] = 1' in source
 

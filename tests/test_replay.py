@@ -96,7 +96,7 @@ def test_render_shows_status_totals_and_the_baseline_delta(tmp_path: Path):
 def test_baseline_roundtrip_records_the_commit(tmp_path: Path):
     suite = replay.run_suite(["a-T1"], repo=tmp_path, runner=lambda c, **k: _result(c, ok=True))
     path = tmp_path / "replay_baseline.json"
-    replay.write_baseline(path, suite, repo=Path(__file__).resolve().parents[2])
+    replay.write_baseline(path, suite, repo=Path(__file__).resolve().parents[1])
     payload = json.loads(path.read_text())
     assert payload["cases"] == ["a-T1"]
     assert payload["rows"][0]["case"] == "a-T1"
@@ -104,6 +104,6 @@ def test_baseline_roundtrip_records_the_commit(tmp_path: Path):
 
 
 def test_makefile_exposes_the_suite():
-    makefile = (Path(__file__).resolve().parents[2] / "Makefile").read_text()
+    makefile = (Path(__file__).resolve().parents[1] / "Makefile").read_text()
     assert "swarm-replay:" in makefile and "swarm-replay-off:" in makefile
     assert "-m swarm.bench.replay" in makefile

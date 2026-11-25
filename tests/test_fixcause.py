@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import swarm
 from swarm import fixcause
 
 
@@ -74,7 +75,7 @@ def test_classify_returns_the_evidence_it_used():
 
 
 def test_the_flow_records_every_repair_phase():
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert "fix_rounds_detail" in source
     for phase in ('phase="fix"', 'phase="senior"', 'phase="verify"', 'phase="selfcheck"'):
         assert phase in source
@@ -121,6 +122,6 @@ def test_qa_pass_with_incomplete_evidence_is_not_a_code_round():
 def test_the_loop_does_not_spend_a_fix_round_on_an_evidence_gap():
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert 'cause["cause"] == "evidence" and self.state.review_verdict == "pass"' in source
     assert "QA passed but the recorded gate evidence is incomplete" in source

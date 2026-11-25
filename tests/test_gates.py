@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import swarm
 from swarm import gates
 
 FULL = [
@@ -105,7 +106,7 @@ def test_flow_state_and_payload_carry_the_selection_record():
     from swarm.flow import SwarmState
 
     assert SwarmState().gate_selection == {}
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert '"gate_selection": self.state.gate_selection' in source
     # the green decision refuses an unconfirmed affected round
     assert 'gate_selection.get("mode") == "affected"' in source

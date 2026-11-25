@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import swarm
 from swarm import guards
 
 
@@ -48,7 +49,7 @@ def test_the_guard_can_be_switched_off(monkeypatch):
 
 
 def test_the_guard_runs_before_the_self_check_and_the_verifier():
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     guard = source.index("raise _DeltaStop")
     self_check = source.index("self._self_check_phase(")
     verifier = source.index("self._verify_phase(task, _verify_kick)")

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import swarm
 from swarm import llms
 from swarm.events import llm_failure_type
 
@@ -33,7 +34,7 @@ def test_a_timed_out_llm_call_is_its_own_event():
 
 
 def test_retries_are_recorded_in_run_json():
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert "if attempt > 1:" in source
     assert "self.state.retries += 1" in source
     assert '"retries": self.state.retries' in source

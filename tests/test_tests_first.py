@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import swarm
 from swarm import tests_first
 
 
@@ -76,7 +77,7 @@ def test_the_test_author_crew_has_no_shell_and_no_gates():
 
 
 def test_the_flow_runs_the_phase_before_the_steps_and_records_it():
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert "self._tests_first_phase(task, _kickoff)" in source
     assert '"tests_first": self.state.tests_first' in source
     # the freeze is cleared at task start, never leaked across tasks

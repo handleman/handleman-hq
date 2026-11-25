@@ -4,14 +4,14 @@ from pathlib import Path
 
 import pytest
 
-REPO = Path(__file__).resolve().parents[2]
+REPO = Path(__file__).resolve().parents[1]
 
 
 def _dry(extra_args: list[str] | None = None, env: dict[str, str] | None = None):
     clean = {k: v for k, v in os.environ.items() if not k.startswith("SWARM_SANDBOX_")}
     clean.update(env or {})
     return subprocess.run(
-        ["bash", str(REPO / "swarm" / "sandbox.sh"), "--dry-run", *(extra_args or [])],
+        ["bash", str(REPO / "sandbox.sh"), "--dry-run", *(extra_args or [])],
         cwd=REPO,
         capture_output=True,
         text=True,
@@ -57,7 +57,7 @@ def test_sandbox_masks_dotenv_when_present():
 
 
 def test_dockerfile_and_build_context_are_sane():
-    dockerfile = (REPO / "swarm" / "docker" / "Dockerfile").read_text()
+    dockerfile = (REPO / "docker" / "Dockerfile").read_text()
     assert 'ENTRYPOINT ["python", "-m", "swarm.flow"]' in dockerfile
     assert "requirements.txt" in dockerfile and "requirements-dev.txt" in dockerfile
     assert "PYTHONPATH=/work" in dockerfile
@@ -68,6 +68,6 @@ def test_dockerfile_and_build_context_are_sane():
 
 
 def test_sandbox_script_requires_docker_only_outside_dry_run():
-    script = (REPO / "swarm" / "sandbox.sh").read_text()
+    script = (REPO / "sandbox.sh").read_text()
     assert "docker daemon is not running" in script
     assert "SWARM_SANDBOX_NO_BUILD" in script

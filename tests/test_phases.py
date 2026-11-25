@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import swarm
 from swarm import phases
 
 
@@ -81,7 +82,7 @@ def test_the_listener_tags_events_with_the_current_role(tmp_path: Path):
 
 
 def test_run_json_records_phases_and_report_aggregates_them():
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert '"phases": _phase_records(self.run_dir)' in source
 
     from swarm import report

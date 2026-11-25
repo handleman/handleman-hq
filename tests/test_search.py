@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import swarm
 from swarm.tools_guarded import (
     FullFileReadTool,
     SearchTool,
@@ -140,5 +141,5 @@ def test_report_falls_back_to_raw_output_when_nothing_is_extractable():
 
 
 def test_report_chars_is_recorded_by_the_flow():
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert 'report["report_chars"] = len(report_text(report))' in source

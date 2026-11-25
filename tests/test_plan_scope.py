@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import swarm
 from swarm import plan_scope
 
 
@@ -63,6 +64,6 @@ def test_a_step_target_is_the_first_named_path():
 
 
 def test_the_flow_applies_the_guard_and_records_it():
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert "plan_scope.scope_steps(" in source
     assert '"plan_trimmed": self.state.plan_trimmed' in source

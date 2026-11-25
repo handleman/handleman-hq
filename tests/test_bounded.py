@@ -6,6 +6,7 @@ import time
 
 import pytest
 
+import swarm
 from swarm import bounded
 
 
@@ -44,6 +45,6 @@ def test_none_means_no_bound():
 def test_the_flow_bounds_a_crew_call():
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert "bounded.run_bounded(" in source
     assert "crew exceeded" in source

@@ -5,6 +5,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+import swarm
 from swarm import escape
 
 
@@ -57,6 +58,6 @@ def test_a_non_green_run_is_ignored(tmp_path: Path):
 def test_the_report_prints_the_ratio():
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parents[1] / "report.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "report.py").read_text()
     assert "escape.rate(rows)" in source
     assert "escape.render(result)" in source

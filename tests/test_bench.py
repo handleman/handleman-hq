@@ -8,9 +8,10 @@ from pathlib import Path
 
 import pytest
 
+import swarm
 from swarm.bench import corpus, score
 
-REPO = Path(__file__).resolve().parents[2]
+REPO = Path(__file__).resolve().parents[1]
 
 
 def _case(**overrides) -> dict:
@@ -243,7 +244,7 @@ def test_configured_cases_can_override_the_default_corpus():
 def test_every_run_records_provenance_for_a_future_corpus():
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert '"base_sha": getattr' in source
     assert '"head_sha": _head_sha()' in source
     assert '"plan_hash": self.state.plan_hash or None' in source

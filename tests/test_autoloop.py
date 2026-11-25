@@ -2,6 +2,7 @@
 
 import subprocess
 
+import swarm
 from swarm.flow import _commit_changes, _next_after
 
 
@@ -1386,7 +1387,7 @@ def test_ollama_timeout_defaults_to_30_minutes(monkeypatch):
 def test_repair_routing_to_the_senior_model_is_in_the_loop():
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parents[1] / "flow.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "flow.py").read_text()
     assert "fix_builder = build_senior_crew if code_rounds > 1 else build_fix_crew" in source
     assert "senior:verify" in source
     # verifier corrections use the senior step crew (a stuck step, not a new step)

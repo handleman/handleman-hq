@@ -6,6 +6,7 @@ came back empty ("Invalid response from LLM call - None or empty",
 2026-10-10, pilot 001-T1 step 5). `is_litellm=True` keeps the mitigation live.
 """
 
+import swarm
 from swarm.llms import coder_llm, planner_llm
 
 
@@ -44,5 +45,5 @@ def test_a_paid_planner_needs_the_global_opt_in(monkeypatch):
 def test_the_plan_crew_passes_the_paid_opt_in():
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parents[1] / "crew.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "crew.py").read_text()
     assert "llm=planner_llm(allow_paid=True)" in source

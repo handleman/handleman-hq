@@ -5,6 +5,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+import swarm
 from swarm import parallel
 
 
@@ -108,7 +109,7 @@ def test_run_batch_integrates_greens_serially_and_keeps_reds_out(tmp_path: Path)
 
 
 def test_the_worker_never_writes_the_main_tree(tmp_path: Path):
-    source = (Path(__file__).resolve().parents[1] / "parallel.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "parallel.py").read_text()
     assert '"worktree", "add", "--detach"' in source
     assert '"--no-commit", "--no-tui"' in source
     assert 'SWARM_STASH_UNRELATED"] = "0"' in source
