@@ -963,7 +963,14 @@ def run(
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     out_dir = _contract.current(root).runs_path() / "acceptance" / stamp
     out_dir.mkdir(parents=True, exist_ok=True)
-    runner = browser_runner or (lambda plan: run_browser(plan, repo=root))
+    runner = browser_runner or (
+        lambda plan: run_browser(
+            plan, repo=root,
+            # The self-test reloads and re-runs every check after a
+            # mutation; the normal pass is minutes, not seconds.
+            timeout=900 if plan.get("selftest") else 240,
+        )
+    )
     reports: list[SpecReport] = []
     artifacts: list[Path] = []
 
