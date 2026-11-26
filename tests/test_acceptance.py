@@ -475,3 +475,26 @@ def test_commit_artifacts_ignores_paths_outside_the_repo(tmp_path):
     # Never raises, and nothing staged -> no commit.
     assert _commit_artifacts(root, [outside], "acceptance: outside", print) == {}
     assert _commit_count(root) == 0
+
+# ---- not_applicable: a non-UI AC is declared, not guessed ------------------
+
+
+def test_a_declared_non_ui_ac_is_na_not_unverified(tmp_path):
+    from swarm.drivers.acceptance import load_not_applicable
+
+    spec = tmp_path / "040-x"
+    spec.mkdir()
+    (spec / "acceptance.toml").write_text(
+        '[[not_applicable]]\nac = "AC-5"\nnote = "deploy config"\n'
+    )
+    assert load_not_applicable(spec) == {"AC-5": "deploy config"}
+
+
+def test_na_counts_as_na_and_renders(tmp_path):
+    from swarm.drivers.acceptance import SpecReport, render_report
+
+    report = SpecReport(spec="x", title="x", criteria=[], checks=[])
+    report.ac_verdicts = {"AC-5": {"verdict": "n/a", "evidence": "no UI", "source": "declared"}}
+    report.not_applicable = {"AC-5": "no UI"}
+    assert report.counts["n/a"] == 1
+    assert "N/A" in render_report(report)

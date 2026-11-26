@@ -120,7 +120,7 @@ class SpecReport:
 
     @property
     def counts(self) -> dict[str, int]:
-        out = {"pass": 0, "fail": 0, "unverified": 0}
+        out = {"pass": 0, "fail": 0, "unverified": 0, "n/a": 0}
         for entry in self.ac_verdicts.values():
             out[entry.get("verdict", "unverified")] = (
                 out.get(entry.get("verdict", "unverified"), 0) + 1
@@ -265,6 +265,32 @@ def load_checks(spec_dir: Path) -> list[Check]:
     return checks
 
 
+def load_not_applicable(spec_dir: Path) -> dict[str, str]:
+    """ACs a spec declares as having no browser surface.
+
+    `[[not_applicable]] ac = "AC-5" note = "deploy config, no UI"` keeps a non-UI
+    AC honest: it is reported N/A, is not counted as unverified, and does not
+    fail `--strict`. It is a declaration, not a guess.
+    """
+    path = spec_dir / "acceptance.toml"
+    if not path.exists():
+        return {}
+    try:
+        import tomllib
+
+        data = tomllib.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+    out: dict[str, str] = {}
+    for raw in data.get("not_applicable", []) or []:
+        if not isinstance(raw, Mapping):
+            continue
+        ac = str(raw.get("ac", "")).strip()
+        if ac:
+            out[ac] = str(raw.get("note", "")).strip() or "no browser surface"
+    return out
+
+
 def load_criteria(spec_dir: Path) -> list[Criterion]:
     try:
         text = (spec_dir / "spec.md").read_text()
@@ -403,7 +429,7 @@ def render_report(report: SpecReport, *, generated: str | None = None) -> str:
         (
             f"Generated: {generated} · Verdict: **{report.verdict}** "
             f"({counts['fail']} failed · {counts['pass']} passed · "
-            f"{counts['unverified']} unverified)"
+            f"{counts['unverified']} unverified · {counts['n/a']} n/a)"
         ),
         "",
         "| AC | Verdict | Source | Evidence |",
@@ -959,6 +985,9 @@ def run(
                 ],
                 report.vision,
             )
+        report.not_applicable = load_not_applicable(spec_dir)
+        for ac, note in report.not_applicable.items():
+            report.ac_verdicts[ac] = {"verdict": "n/a", "evidence": note, "source": "declared"}
         artifacts.append(write_report(spec_dir, report))
         if queue and os.getenv(QUEUE_ENV, "1") != "0":
             tasks_path = spec_dir / "tasks.md"
@@ -977,7 +1006,7 @@ def run(
         log(
             f"acceptance: {report.spec} → {report.verdict} "
             f"({counts['fail']} failed, {counts['pass']} passed, "
-            f"{counts['unverified']} unverified)"
+            f"{counts['unverified']} unverified · {counts['n/a']} n/a)"
         )
 
     verdict = (
