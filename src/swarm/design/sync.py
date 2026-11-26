@@ -254,6 +254,7 @@ def status(config: DesignConfig) -> dict[str, Any]:
         {
             "transport": config.transport,
             "auto_transport": "rest" if config.rest_token() else "mcp",
+            "rest_token": bool(config.rest_token()),
             "file_key": config.file_key,
             "nodes": list(config.nodes),
         }

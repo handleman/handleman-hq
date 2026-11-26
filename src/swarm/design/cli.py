@@ -10,7 +10,7 @@ from pathlib import Path
 
 from swarm import contract as contract_mod
 from swarm.design import checks, oauth, sync
-from swarm.design.config import DesignConfig, DesignConfigError, load_design
+from swarm.design.config import DesignConfig, DesignConfigError
 from swarm.design.mcp import DesignError
 from swarm.design.rest import RestError
 from swarm.paths import target_root
@@ -56,7 +56,9 @@ def _config(root: Path, spec: str) -> DesignConfig:
     if mapping is None:
         raise DesignConfigError("swarm.yaml has no design: block")
     spec_dir = (root / current.specs_dir / spec) if spec else None
-    config = load_design(root, spec_dir, mapping=mapping)
+    # `resolve` loads the target's .env, so `hq figma status` sees FIGMA_TOKEN
+    # exactly as a sync/preflight would.
+    config = sync.resolve(root, mapping=mapping, spec_dir=spec_dir)
     if config is None:
         raise DesignConfigError("design block is empty")
     return config
