@@ -124,10 +124,15 @@ viewport = "desktop"           # desktop | mobile | both
 ```
 
 Kinds: `exists`, `absent`, `count`, `min_count`, `text`, `value_set`, `click`,
-`wait_for`, `console_errors`, `route_request`. `route_request` fills and selects
-both endpoints (auto-plan only arms for *selected* suggestions) and asserts a
+`wait_for`, `select`, `no_match`, `location_denied`, `geo_step`,
+`console_errors`, `route_request`. `route_request` fills and selects both
+endpoints (auto-plan only arms for *selected* suggestions) and asserts a
 `POST /route` fired; a check that needs a different pair than the previous one
-sets `origin`.
+sets `origin`. `select` applies a native `<select>` value; `no_match` asserts a
+string is absent from the document HTML and the loaded resource URLs (token
+discipline: `value = "pk."`). `location_denied` clears the geolocation
+permission, reloads, and expects the start-location dialog; `geo_step` moves the
+browser fix by `value = "lat,lng"` and expects the marker's style to change.
 
 Checks run sequentially inside a spec and the page **reloads at each spec
 boundary**: later checks can read state an earlier one produced, but an

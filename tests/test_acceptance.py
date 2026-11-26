@@ -583,3 +583,10 @@ def test_select_and_no_match_are_known_check_kinds():
 
     assert "select" in CHECK_KINDS
     assert "no_match" in CHECK_KINDS
+
+
+def test_location_and_geo_kinds_are_known():
+    from swarm.drivers.acceptance import CHECK_KINDS
+
+    assert "location_denied" in CHECK_KINDS
+    assert "geo_step" in CHECK_KINDS

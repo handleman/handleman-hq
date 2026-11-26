@@ -63,6 +63,8 @@ CHECK_KINDS = (
     "wait_for",
     "select",
     "no_match",
+    "location_denied",
+    "geo_step",
 )
 
 _AC_RE = re.compile(r"^\s*[-*]?\s*\*\*(AC-\d+)\s*[—–:-]\s*(.+?)\*\*\s*(.*)$")
