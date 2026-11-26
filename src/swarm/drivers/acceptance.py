@@ -117,10 +117,10 @@ class SpecReport:
         verdicts = [entry.get("verdict") for entry in self.ac_verdicts.values()]
         if "fail" in verdicts:
             return "FAIL"
-        if "pass" in verdicts:
-            return "PASS"
         if self.config_errors and os.getenv(STRICT_ENV, "0") == "1":
             return "FAIL"
+        if "pass" in verdicts:
+            return "PASS"
         return "UNVERIFIED"
 
     @property
