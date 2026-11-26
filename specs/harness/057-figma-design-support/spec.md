@@ -3,6 +3,16 @@
 Status: proposed · Owner: operator · Depends on: 042 (visual phase), 043
 (acceptance), 048 (contract), 049/052 (layout), 056 (drivers)
 
+> **Revision 2026-11-26 — MCP is the transport.** The first draft used REST
+> only. The operator wants the swarm to behave like OpenCode: when it meets a
+> Figma link and no token is stored, it shows an authorization URL, waits for
+> the browser redirect, stores the token and continues. The Figma remote MCP
+> server supports standard MCP OAuth (discovery + DCR + PKCE), and the Python
+> `mcp` SDK (1.30.0, already present via CrewAI) implements it. MCP is now the
+> primary transport for **both** lanes; the cache stays as the run's
+> deterministic snapshot, and REST remains an optional fallback for headless
+> environments. The sections below are updated accordingly.
+
 ## What / Why
 
 The operator is preparing a Figma design for the comfort-walking-router. The
@@ -48,10 +58,13 @@ Facts this design relies on:
   JSON-speaking commands declared in `swarm.yaml`. `layout.py` already says a
   future Figma importer writes the same `layout.toml`.
 
-Decision: **MCP for the human, REST + cache for the queue.** MCP's OAuth cannot
-run inside an unattended flow, and its generated React/Tailwind code is the wrong
-input for a Svelte app. The raw IR + variables + reference renders are stable,
-reviewable and offline.
+Decision (revised): **MCP for both lanes, with a committed cache.** The queue
+performs the same OAuth flow as the operator on first use (MCP authorization
+code + PKCE, loopback redirect, token stored 0600), then reads the design into
+the same stable IR and continues offline from the cache. The generated
+React/Tailwind code is used as reference only; the coder still writes Svelte.
+REST is a **first-class alternative** for CI/headless runs (personal access
+token, same cache), not a degraded mode.
 
 ## Goals
 
@@ -59,12 +72,16 @@ reviewable and offline.
    committed design cache (normalized IR, renders, tokens, brief, lock).
 2. The planner, coder, verifier and acceptance can implement and verify a frame
    **offline** from that cache; no OAuth, no Figma call during a run.
-3. Design fidelity becomes deterministic where possible: computed tokens, region
+3. The first Figma use in a run is an **authorization step**, not a failure:
+   with no stored token the harness shows the URL, receives the loopback
+   callback, stores the token and **continues the same run**; a headless run
+   stops with a typed `figma_auth_required` and the same URL.
+4. Design fidelity becomes deterministic where possible: computed tokens, region
    bounds, and a thresholded screenshot diff join the existing gates; the vision
    model stays advisory.
-4. A stale or missing design cache is a typed stop, not a silent freehand
+5. A stale or missing design cache is a typed stop, not a silent freehand
    implementation.
-5. The OpenCode operator lane is documented and shareable in the target repo
+6. The OpenCode operator lane is documented and shareable in the target repo
    (MCP entry + skill + doc), with no secret in git.
 
 ## Non-goals
@@ -85,13 +102,20 @@ New optional block; absent means no design lane (today's behaviour):
 ```yaml
 design:
   provider: figma
+  transport: auto                # auto (default) | mcp | rest
+  # auto: MCP when a token is stored, REST when FIGMA_TOKEN is set,
+  # otherwise the first-run MCP OAuth prompt.
   file_key: "<key from /design/<key>/...>"
   nodes: ["12:34", "56:78"]      # allowlist; no other node may enter a prompt
-  token_env: FIGMA_TOKEN         # default
+  token_env: FIGMA_TOKEN         # REST fallback only; default
   dir: designs/                  # committed cache
   scale: 2                       # render scale for reference PNGs
   formats: [png]                 # png|svg per frame (optional)
   max_bytes: 20000000            # per response/asset cap
+  auth:
+    timeout_s: 600               # how long the loopback waits for the browser
+    open_browser: true           # best-effort; the URL is always printed
+    token_file: ""               # default: $XDG_DATA_HOME/handleman-hq/figma/oauth.json
 ```
 
 Parsing rules: unknown keys tolerated; `file_key` and a non-empty `nodes` list
@@ -121,6 +145,110 @@ frame = "desktop"                # which cached render / viewport
 baseline = "designs/<key>/12:34.png"
 threshold = 0.02                 # fraction of differing pixels
 ```
+
+## Transport: MCP with first-run OAuth
+
+Figma's remote server advertises standard MCP authorization (verified
+2026-11-26):
+
+```
+resource      https://mcp.figma.com/mcp
+AS metadata   https://api.figma.com/.well-known/oauth-authorization-server
+authorize     https://www.figma.com/oauth/mcp
+token         https://api.figma.com/v1/oauth/token
+register      https://api.figma.com/v1/oauth/mcp/register   (DCR)
+PKCE          S256 · state required · scope mcp:connect
+Bearer        resource_metadata="https://mcp.figma.com/.well-known/oauth-protected-resource"
+```
+
+The **`mcp` Python SDK 1.30.0** (already pulled in by CrewAI) provides
+`OAuthClientProvider(server_url, client_metadata, storage, redirect_handler,
+callback_handler, timeout)` and `streamablehttp_client(url, auth=provider)`.
+We use them rather than hand-rolling OAuth:
+
+- `OAuthClientMetadata(redirect_uris=["http://127.0.0.1:<port>/callback"],
+  token_endpoint_auth_method="client_secret_basic", scope="mcp:connect",
+  client_name="handleman-hq")`.
+- `redirect_handler(url)` writes `run.json.auth.url`, prints a boxed URL in the
+  human log and (best effort) opens the browser.
+- `callback_handler()` receives `(code, state)` from a loopback HTTP server
+  bound to `127.0.0.1` (default port 8765, fallback to an ephemeral port; DCR
+  registers the chosen URI), validates `state`, and returns it to the SDK.
+- `TokenStorage` is file-backed at `$XDG_DATA_HOME/handleman-hq/figma/oauth.json`
+  (0600), holding the DCR client info and access/refresh tokens. It is never in
+  the repo, never in a prompt, never in `run.json`.
+- Expired access tokens refresh silently; `invalid_grant` drops the token and
+  re-runs the authorization step.
+
+### First-run flow (the operator's requirement)
+
+1. A run needs Figma (a `design:` block or a spec's `design.toml`) and the token
+   file is absent/expired.
+2. **Before any model call**, the harness enters `awaiting_auth`: it prints the
+   URL (`https://www.figma.com/oauth/mcp?...`), records it in
+   `run.json.auth`, and waits (`auth.timeout_s`, default 10 min).
+3. The user authorizes in the browser; Figma redirects to
+   `http://127.0.0.1:<port>/callback?code=…&state=…`.
+4. The callback server returns the code, the SDK exchanges it, the token is
+   stored 0600, and the **same run continues** (design fetch → planner).
+5. No callback before the timeout → `figma_auth_timeout`; the URL stays in the
+   record and a re-run retries. `--non-interactive` (`SWARM_NONINTERACTIVE=1`)
+   fails immediately with `figma_auth_required` and the URL.
+6. Remote host: document `ssh -L <port>:127.0.0.1:<port>` or `hq figma auth
+   --paste` (paste the redirect URL; parse `code`/`state`) for a browser on
+   another machine.
+
+### MCP session and tools
+
+- Connect with `streamablehttp_client` + `ClientSession`; initialize, then call
+  tools. The harness is synchronous, so each call opens a short session (the
+  OAuth provider/token is reused); a persistent session is an optimisation.
+- **Read-only allowlist** exposed to the coder/verifier:
+  `get_metadata`, `get_design_context`, `get_screenshot`, `get_variable_defs`,
+  `download_assets`, `get_code_connect_map`, `search_design_system`,
+  `get_libraries`. Everything else — especially `use_figma`,
+  `generate_figma_design`, `create_new_file`, `upload_assets` — is not exposed.
+- Arguments are validated against the allowlisted `file_key`/nodes; the model
+  cannot introduce a URL. Tool outputs are untrusted data; generated code is
+  reference, never executed.
+- Calls are budgeted per task (default 8) and cached under
+  `designs/<key>/mcp/<tool>-<node>-<hash>.json` (+ images), so a retry or the
+  verifier does not call Figma again. Base64 images are written to files and
+  only the path enters the prompt.
+- `hq figma status` reports token presence/expiry/account (`whoami`), never the
+  token; `hq figma logout` deletes it.
+
+### REST transport (first-class, not just a fallback)
+
+Figma's **official REST API** is a supported transport alongside MCP. It is not
+something Figma "proposes" instead of MCP; it is the raw HTTP API the MCP server
+itself is built on, and it is the right choice for CI/headless:
+
+- `GET /v1/files/{key}/nodes?ids=…` — file/node JSON (the IR source)
+- `GET /v1/images/{key}?ids=…&format=png&scale=…` — reference renders
+- `GET /v1/files/{key}/variables/local` — variables (plan-dependent)
+- `GET /v1/files/{key}/components`, `/styles` — component/style inventory
+- Auth: `X-Figma-Token` personal access token, or a Figma OAuth app with REST
+  scopes (`Authorization: Bearer`). **The MCP OAuth token is not a REST token**:
+  it is issued for `mcp:connect`/the MCP resource, so REST needs its own
+  `FIGMA_TOKEN` (or its own OAuth app).
+
+`transport: rest` (or `auto` with only `FIGMA_TOKEN`) writes the **same cache**
+as MCP, so the IR, brief, prompts, checks and offline behaviour are identical.
+
+| | MCP | REST |
+| --- | --- | --- |
+| Auth | OAuth (DCR + PKCE), interactive first run | Personal access token (or REST OAuth app) |
+| Data | tools: metadata, design context/code, variables, screenshots, assets, Code Connect, comments | raw nodes, images, variables, components, styles |
+| `get_design_context` (React/Tailwind code) | yes | no |
+| Code Connect mappings | yes (`get_code_connect_map`) | no (CLI is separate) |
+| CI/headless | needs a browser callback (or paste) | yes, token only |
+| Output | same design cache | same design cache |
+
+`auto` (default) picks MCP if a token is stored, REST if `FIGMA_TOKEN` is set,
+and otherwise starts the MCP OAuth prompt. The operator can force either with
+`transport: mcp|rest` or `--transport`. Both are first-class; neither is
+deprecated.
 
 ## Design cache (committed, the only thing the queue reads)
 
@@ -260,7 +388,21 @@ Not part of the harness code, but shipped as documentation:
   checks and the OpenCode lane; `swarm.yaml.example` has the block.
 - **AC-9 — Tests.** Unit tests cover the IR normaliser, the lock/hash, the
   allowlist, the checks and redaction; the factory suite stays green.
-- **AC-10 — Target pilot.** The comfort-walking-router implements one frame from
+- **AC-11 — First-run OAuth.** With no stored token, a run that needs Figma
+  prints a working authorization URL, receives the loopback callback, exchanges
+  the code, stores the token 0600 and continues the same run. A timeout is
+  `figma_auth_timeout`; `--non-interactive` is `figma_auth_required` with the
+  URL. `hq figma auth/status/logout` manage it; the token is never logged.
+- **AC-12 — Refresh.** An expired access token refreshes silently; an invalid
+  refresh drops the token and re-prompts. `hq figma status` reports expiry
+  without printing the secret.
+- **AC-13 — Read-only tools.** The MCP allowlist exposes only read tools; write
+  tools are absent; the file/node allowlist is enforced on arguments; calls are
+  budgeted and cached; base64 images become files.
+- **AC-14 — REST parity.** `transport: rest` with `FIGMA_TOKEN` writes a cache
+  that produces the same IR/brief/checks; `auto` selects it when no MCP token is
+  present. The MCP token is not reused for REST.
+- **AC-15 — Target pilot.** The comfort-walking-router implements one frame from
   a cached design with the design checks green (or an honest, reported
   threshold), proving the lane end-to-end.
 

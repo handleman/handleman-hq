@@ -3,46 +3,55 @@
 One task maps to one AC (small tasks may share an AC). Documentation and the
 `swarm.yaml.example` change in the same task that introduces the field.
 
-- [ ] T1 (AC-1, AC-9): **Design package + IR.** Add `src/swarm/design/` with
-  `figma.py` (REST client: `X-Figma-Token`, timeout, 429 backoff, content-type
-  and `max_bytes` caps), `ir.py` (normalise `/v1/files/{key}/nodes` into the
-  compact IR: stable order, text truncation, size cap) and tests against
-  recorded fixtures. No live Figma in tests.
-- [ ] T2 (AC-1, AC-3): **Atomic cache + lock.** `cache.py` writes
-  `designs/<key>/` via temp-dir → replace; `design.lock` records the Figma file
-  version, node IDs and sha256 per artifact; a second `sync` without `--force`
-  is a no-op; only allowlisted nodes are fetched. Unit tests for lock/hash and
-  allowlist rejection.
-- [ ] T3 (AC-1, AC-7): **Token safety.** Read `design.token_env` (default
-  `FIGMA_TOKEN`) only in `sync`; missing → `design_token_missing`; redact
-  `X-Figma-Token`/`access_token` from messages, logs and artifacts. Unit test
-  feeds a URL with `access_token` and asserts it is absent everywhere.
-- [ ] T4 (AC-2, AC-9): **`hq design sync|check`.** CLI + `python -m swarm.design`;
-  `--force`, `--spec`; `check` validates the lock/hashes and every `design.toml`
-  node without network or a token. Tests: synced cache + no token still passes
-  `check`; tampered hash → `design_stale`.
-- [ ] T5 (AC-3, AC-6): **Contract + guards.** `Contract.design` parsing and
-  validation in `contract.py`; `design.toml` loader; preflight runs `design
-  check` before the first model call; typed reasons `design_missing`,
-  `design_stale`, `design_node_missing`. `designs/` added to the out-of-scope
-  paths and the delta guard. Docs in `swarm.yaml.example`.
-- [ ] T6 (AC-4): **Prompts and run record.** Planner gets the brief and the
-  node; coder gets the brief + reference PNG path; verifier gets the reference
-  PNG + app screenshots. Prompt tests assert the token and raw Figma URLs are
-  absent. `run.json.design = {file_key, node, version, stale}`.
-- [ ] T7 (AC-5): **Deterministic design checks.** Browser facts gain computed
-  CSS variables and region rects; `design_eval.py` checks tokens (exact),
-  regions (`tolerance_px`) and the screenshot diff (pixel fraction ≤ threshold),
-  writing diffs to `<run>/design_diff/`. Wire into acceptance and 042;
-  `--strict` fails an uncovered design AC and `--selftest` proves a wrong token
-  or rect fails.
-- [ ] T8 (AC-8): **Docs + OpenCode lane.** `docs/design.md` (contract, cache,
-  commands, checks, security, two lanes); `swarm.yaml.example` block; target
-  repo `opencode.json` remote MCP entry, `figma-implement` skill and
-  `docs/figma.md` (remote/desktop, seats, OAuth via `/mcps`).
-- [ ] T9 (AC-10): **Pilot.** Sync one real frame, implement it in a product spec
-  on the comfort-walking-router, run the design checks offline, record the
-  threshold/result. Release the factory (`v0.6.0`) and pin the app.
-- [ ] T10 (AC-9): **Suite.** Factory tests for the IR normaliser, lock, checks,
-  redaction and guards; `ruff` + `factory-audit` clean; the full factory suite
-  stays green.
+- [ ] T1 (AC-11, AC-12): **OAuth + token storage.** `src/swarm/design/oauth.py`
+  using `mcp` 1.30 `OAuthClientProvider` + a file-backed `TokenStorage`
+  (`$XDG_DATA_HOME/handleman-hq/figma/oauth.json`, 0600): DCR client info,
+  access/refresh tokens, expiry, silent refresh, `invalid_grant` → re-auth.
+  `hq figma auth|status|logout`; `--non-interactive` → `figma_auth_required`
+  with the URL. Tests use a fake authorization server; the token never appears
+  in output.
+- [ ] T2 (AC-11): **First-run resume.** Loopback callback server on
+  `127.0.0.1:8765` (ephemeral fallback), `state` validation, browser open
+  best-effort, URL in the human log + `run.json.auth.url`, timeout
+  (`figma_auth_timeout`). Before any model call, the run enters `awaiting_auth`
+  and **continues in the same process** after the callback. `--paste` parses a
+  pasted redirect URL. Test: no token → URL → callback → token stored → run
+  proceeds.
+- [ ] T3 (AC-13): **MCP client + read-only tools.** `streamablehttp_client` +
+  `ClientSession`; initialize/list_tools; expose only `get_metadata`,
+  `get_design_context`, `get_screenshot`, `get_variable_defs`,
+  `download_assets`, `get_code_connect_map`, `search_design_system`,
+  `get_libraries`. Block write/unknown tools. Validate file/node against the
+  allowlist; per-task budget (8); size caps; cache results under
+  `designs/<key>/mcp/`; base64 images → files. Mock MCP server tests.
+- [ ] T4 (AC-14): **REST transport + auto.** `src/swarm/design/rest.py` with
+  `X-Figma-Token`: `/nodes`, `/images`, `variables/local`, `components`,
+  `styles`; timeouts, 429 backoff, size caps; the same IR/cache. `transport:
+  mcp|rest|auto` (`auto`: MCP token → MCP; else `FIGMA_TOKEN` → REST; else
+  OAuth). The MCP token is never sent to REST. Fixture tests prove the same
+  brief/IR shape from both.
+- [ ] T5 (AC-1, AC-3, AC-9): **Sync + lock.** `hq design sync|check` over either
+  transport: atomic temp-dir → replace, `design.lock` (Figma version + node ids
+  + sha256), no-op when current, `--force`, `--spec`; unknown node →
+  `design_node_missing`; tampered hash → `design_stale`. Unit tests.
+- [ ] T6 (AC-3, AC-6): **Contract + guards.** `Contract.design` parsing
+  (`provider`, `transport`, `file_key`, `nodes`, `dir`, `auth`), `design.toml`
+  loader, preflight `design check` + auth readiness before the first model
+  call, `designs/` out of coder scope, typed reasons. Docs in
+  `swarm.yaml.example`.
+- [ ] T7 (AC-4): **Prompts and run record.** Planner: brief + node. Coder:
+  brief + reference PNG + read tools. Verifier: reference PNG + app screenshots.
+  Prompt tests assert no token/URL. `run.json.design` and `run.json.auth`.
+- [ ] T8 (AC-5): **Deterministic checks.** Browser facts gain computed CSS
+  variables + region rects; `design_eval.py` checks tokens (exact), regions
+  (`tolerance_px`), screenshot diff (fraction ≤ threshold) with diffs in
+  `<run>/design_diff/`; wire into acceptance + 042; `--strict`/`--selftest`.
+- [ ] T9 (AC-8): **Docs.** Factory `docs/design.md` (transports, OAuth, cache,
+  commands, checks, security, headless/SSH); `swarm.yaml.example`; target repo
+  `opencode.json` + `figma-implement` skill + `docs/figma.md` (both transports).
+- [ ] T10 (AC-15): **Pilot + release.** Sync one real frame via MCP (first-run
+  OAuth) and one via REST; implement the frame in a product spec with the design
+  checks offline; release `v0.6.0` and pin the app.
+- [ ] T11 (AC-9): **Suite.** Tests for OAuth/storage, MCP allowlist/budget,
+  REST parity, sync/lock, guards, checks and redaction; `ruff` +
+  `factory-audit`; the full suite stays green.

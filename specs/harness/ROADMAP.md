@@ -80,12 +80,15 @@ until they diverge. v0.4.0 released.
 
 ## Now — design support (057)
 
-The operator is preparing a Figma design. The queue must implement frames from
-a committed, versioned cache (REST + `hq design sync`), while the human lane
-uses Figma's remote MCP through OpenCode. Spec: `057-figma-design-support/`
-(spec + plan + tasks). Key decisions: MCP is for the operator, REST + cache is
-for the queue; design checks (tokens/regions/screenshot diff) are deterministic
-and the vision pass stays advisory; a stale cache is a typed stop.
+The operator is preparing a Figma design. The queue implements frames from a
+committed, versioned cache fetched over **MCP with first-run OAuth** (the run
+shows the URL, waits for the callback, stores the token and continues) or over
+**REST with a PAT** (`transport: auto|mcp|rest`); the human lane uses the same
+remote MCP through OpenCode. Spec: `057-figma-design-support/`
+(spec + plan + tasks). Key decisions: MCP is the primary transport for both lanes, REST is
+first-class parity for CI/headless; the committed cache is what the queue reads;
+design checks (tokens/regions/screenshot diff) are deterministic and the vision
+pass stays advisory; a stale cache is a typed stop.
 
 ## Open questions
 

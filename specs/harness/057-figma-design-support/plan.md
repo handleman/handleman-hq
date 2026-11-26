@@ -3,91 +3,94 @@
 ## Architecture
 
 ```
-Figma file ──(REST, token)──► hq design sync ──► designs/<key>/ (committed)
-                                                   │  IR + PNG + tokens + brief + lock
-                                                   ▼
-                                    planner / coder / verifier / design checks
-                                                   │
-OpenCode operator ──(MCP, OAuth)──► Figma MCP ─────┘  (human lane, not in the queue)
+Figma file
+  ├──(MCP, OAuth: DCR + PKCE)──► mcp SDK 1.30 · read-only tools
+  └──(REST, FIGMA_TOKEN)───────► raw nodes/images/variables
+                     └──► hq design sync ──► designs/<key>/ (committed)
+                                                │ IR · PNG · tokens · brief · lock
+                                                ▼
+                                  planner / coder / verifier / design checks
+                                                │
+OpenCode operator ──(MCP, OAuth via /mcps)──────┘  (human lane, same file)
 ```
 
-Two independent transports, one shared source of truth (the Figma file). The
-queue never performs OAuth; the operator lane never writes the cache by hand.
+Both transports write the same cache. `transport: auto` prefers a stored MCP
+token, then `FIGMA_TOKEN` (REST), then the first-run MCP OAuth prompt. The cache
+is what the queue reads; Figma is contacted only by `hq design sync`/auth.
 
 ## Phases
 
-### Phase 1 — Contract, IR and sync (AC-1, AC-3, AC-7, AC-9)
+### Phase 1 — MCP client, OAuth and token storage (AC-11, AC-12, AC-13)
 
-- Add `design:` to `contract.py` (`Contract.design: dict`), strict enough to
-  catch a typo, tolerant of unknown keys.
-- New `src/swarm/design/` package:
-  - `figma.py` — REST client (`X-Figma-Token`, timeouts, 429 backoff, size caps,
-    redaction).
-  - `ir.py` — normalise `/nodes` JSON into the compact IR (stable order, text
-    truncation, capped size).
-  - `cache.py` — atomic temp-dir → replace; `design.lock` with version + hashes.
-  - `brief.py` — derive `design-brief.md` from the IR/tokens.
-- `hq design sync|check` (CLI, also `python -m swarm.design`).
-- Tests with **recorded JSON fixtures** (no live Figma in tests); a redaction
-  test for `access_token`/`X-Figma-Token`.
+- `src/swarm/design/mcp.py`: connect with `streamablehttp_client` +
+  `ClientSession`; initialize; `list_tools`; call only the read allowlist.
+- `src/swarm/design/oauth.py`: `OAuthClientProvider` + a file-backed
+  `TokenStorage` (`$XDG_DATA_HOME/handleman-hq/figma/oauth.json`, 0600), DCR
+  client info, access/refresh tokens, refresh/`invalid_grant` handling.
+- Loopback callback server (127.0.0.1:8765, ephemeral fallback), `state`
+  validation, `redirect_handler` → boxed URL + `run.json.auth.url`, browser
+  open best-effort, timeout, `--paste` fallback.
+- `hq figma auth|status|logout`; `--non-interactive` typed failures.
+- Read-only tool adapter: argument allowlist (file/node), per-task budget,
+  response size cap, results cached under `designs/<key>/mcp/`, base64 images to
+  files.
 
-Verification: `pytest tests/test_design_*.py`, `ruff`, `factory-audit`.
+Verification: mock MCP server + fake AS in tests (no live Figma in the suite);
+token file is never printed; a stored token reconnects without a prompt.
 
-### Phase 2 — Queue wiring (AC-2, AC-3, AC-4, AC-6)
+### Phase 2 — REST transport parity (AC-14)
 
-- `design.toml` loader (node, tokens, regions, screenshot) next to `layout.toml`.
-- Preflight: token presence + `design check` (typed reasons) before the first
-  model call.
-- Planner prompt: brief + node scope; coder prompt: brief + reference PNG path;
-  verifier: reference PNG + app screenshots.
-- Add `designs/` to the immutable/out-of-scope paths; `run.json.design`.
-- Offline test: cache present, token unset → planning/checks still work.
+- `src/swarm/design/rest.py`: `X-Figma-Token`; `/nodes`, `/images`,
+  `variables/local`, `components`, `styles`; timeouts, 429 backoff, size caps.
+- The same normaliser/cache; `transport: rest|mcp|auto`; `auto` selection rules
+  (MCP token → MCP; else `FIGMA_TOKEN` → REST; else OAuth prompt).
+- Tests with recorded fixtures; a REST cache and an MCP cache produce the same
+  brief/IR shape.
 
-Verification: prompt tests (no token/URL), guard tests, a dry flow with a stub
-model.
+### Phase 3 — Sync, queue state and prompts (AC-1–AC-4, AC-6)
 
-### Phase 3 — Deterministic design checks (AC-5)
+- `hq design sync|check`: atomic cache + `design.lock` (file version + hashes),
+  no-op when current, typed `design_*` reasons.
+- `design.toml` loader (node, tokens, regions, screenshot).
+- Preflight: `design check` + auth readiness before the first model call.
+- `awaiting_auth` state: print/record the URL, wait, then **resume the same
+  run**; the supervisor treats it as a wait, not a model failure.
+- Prompts: planner gets the brief/node; coder gets the brief + reference PNG +
+  the read tools; verifier gets the reference PNG + app screenshots. Prompt
+  tests assert no token/URL.
+- `run.json.design` + `run.json.auth`; `designs/` is out of coder scope.
 
-- Extend the browser facts payload with computed CSS variables and region rects
-  (the existing `.mjs` runner).
+### Phase 4 — Deterministic design checks (AC-5)
+
+- Browser facts: computed CSS variables + region rects.
 - `design_eval.py`: tokens (exact), regions (`tolerance_px`), screenshot diff
-  (pixel fraction ≤ threshold), diff images in `<run>/design_diff/`.
-- Wire into acceptance and the 042 visual phase; `--strict` (uncovered design AC
-  fatal) and `--selftest` (mutate a token/region, expect failure).
-- Report columns in `acceptance.md`; the vision note stays advisory.
+  (fraction ≤ threshold), diffs in `<run>/design_diff/`.
+- Wire into acceptance + 042; `--strict`/`--selftest`; vision stays advisory.
 
-Verification: evaluator unit tests; a deliberate wrong token/rect fails;
-`--selftest` reports OK; diffs written.
+### Phase 5 — Docs and pilot (AC-8, AC-15)
 
-### Phase 4 — Docs and OpenCode lane (AC-8)
-
-- `docs/design.md`: contract, cache, commands, checks, security, two lanes.
-- `swarm.yaml.example` `design:` block.
-- Target repo: `opencode.json` remote MCP entry, `figma-implement` skill,
-  `docs/figma.md` (operator + queue lane, auth, seats, desktop fallback).
-
-Verification: docs links, `opencode mcp list`, the skill is discovered.
-
-### Phase 5 — Pilot and release (AC-10, AC-2)
-
-- Sync one real frame from the comfort-walking-router design; implement it in a
-  feature spec; design checks green (or a reported threshold) with the stand
-  offline.
-- Release the factory (`v0.6.0`), pin the app, record the cache in git.
+- `docs/design.md` (factory): transports, OAuth, cache, commands, checks,
+  security, headless.
+- Target repo: `opencode.json` MCP entry + `figma-implement` skill +
+  `docs/figma.md` (both transports; MCP for operator, MCP/REST for queue).
+- Pilot one real frame; release `v0.6.0`; pin the app.
 
 ## Risks
 
 | Risk | Mitigation |
 | --- | --- |
-| Figma OAuth cannot run unattended | REST token + committed cache; OAuth only in OpenCode |
-| Token leaks into prompts/logs | token read only in `sync`; redaction test; never a prompt field |
-| Design drifts from code | `design.lock` version + `design_stale`; `hq design sync` in the operator loop |
-| Screenshot diff is noisy (fonts/AA) | threshold + region/token checks first; diffs are evidence, not the only gate |
-| IR grows too large | per-node truncation, size caps, `get_metadata`-style outline first |
-| Coder edits the cache | `designs/` out-of-scope; sync is the only writer, atomic |
-| Free-tier rate limits | cache by version; 429 backoff; `--force` explicit |
+| OAuth needs a browser callback | loopback + URL in the run record; `--paste`; SSH forward; REST fallback |
+| Token leaks | file 0600 outside the repo; never in prompts/run.json/logs; redaction tests |
+| MCP token confused with REST | separate storage; the MCP token is not sent to REST; `auto` rules |
+| Design drifts | `design.lock` version + `design_stale` |
+| Screenshot noise | token/region checks first; threshold + reported diffs |
+| Tool-loop cost | read allowlist, budget, cache, short sessions |
+| Coder edits the cache | `designs/` out of scope; sync is the only writer |
+| Rate limits | cache by version; 429 backoff; `--force` explicit |
 
 ## Definition of done
 
-All ACs checked; factory tests/ruff/audit green; a pilot frame implemented from a
-cache with no network during the run; docs merged in both repos.
+All ACs checked; first-run OAuth demonstrated (URL → callback → token → resume);
+REST parity proven with a `FIGMA_TOKEN`; factory tests/ruff/audit green; a pilot
+frame implemented from the cache with no network during the run; docs in both
+repos.
