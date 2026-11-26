@@ -255,6 +255,8 @@ def probe_url(name: str, env: dict[str, str] | None = None) -> str:
         return ""
     base = str(source.get(provider.base_env, "")).strip() if provider.base_env else ""
     base = (base or provider.default_base).rstrip("/")
+    if not base:
+        return ""  # no declared endpoint (e.g. a proxy-only gateway)
     if provider.kind == "local":
         return f"{base}/api/tags" if provider.name == "ollama" else f"{base}/models"
     if provider.catalogue in {"public", "keyed"}:

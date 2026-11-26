@@ -63,14 +63,12 @@ Spec: [`056-driver-relocation/`](056-driver-relocation/) (design only; v0.4 star
 
 ## Open questions
 
-- `[ ]` **Subscription ergonomics** — a local LiteLLM proxy is the only route for
-  Claude Pro/Max and ChatGPT/Codex today. Do we ship a `make proxy` recipe
-  (compose + config) or document it only?
+- `[x]` **Subscription ergonomics** — shipped `examples/litellm-proxy/` (compose +
+  config + README); the harness points at it as `openai_compatible/<alias>`.
 - `[ ]` **Prefix strictness** — `SWARM_STRICT_PREFIXES=0` keeps today's silent
   OpenRouter fallback; decide whether v0.4 flips the default to strict.
-- `[ ]` **Provider drift** — quarterly refresh of `providers.py` against the
-  LiteLLM index and the live probe (a `make provider-audit` could run the
-  no-key probe for every registry entry).
+- `[x]` **Provider drift** — `make provider-audit` runs the no-key probe over every
+  registry entry (38 providers; local ones are optional and never fatal).
 
 ## Dependencies
 

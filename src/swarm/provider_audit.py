@@ -36,6 +36,14 @@ def audit(
     return rows
 
 
+def _is_fatal(name: str, verdict: str) -> bool:
+    """Local providers are optional; their absence is not registry drift."""
+    if verdict not in {"wrong-base", "unreachable"}:
+        return False
+    provider = providers.by_name(name)
+    return not (provider and provider.kind == "local")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="provider-audit", description=__doc__)
     parser.add_argument("--only", default="", help="comma-separated provider names")
@@ -47,11 +55,11 @@ def main(argv: list[str] | None = None) -> int:
     fail = 0
     for name, verdict, detail in rows:
         print(f"{name:<{width}}  {verdict:<14} {detail}")
-        if verdict in {"wrong-base", "unreachable"}:
+        if _is_fatal(name, verdict):
             fail = 1
     print(
         f"provider-audit: {len(rows)} provider(s), "
-        f"{sum(1 for _, v, _ in rows if v in {'wrong-base', 'unreachable'})} problem(s)"
+        f"{sum(1 for name, v, _ in rows if _is_fatal(name, v))} problem(s)"
     )
     return fail
 

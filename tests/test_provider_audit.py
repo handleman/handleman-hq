@@ -43,3 +43,10 @@ def test_the_cli_is_clean_when_everything_answers(monkeypatch):
         provider_audit, "audit", lambda only: [("openai", "auth-required", "")]
     )
     assert provider_audit.main([]) == 0
+
+
+def test_a_local_provider_that_is_not_running_is_not_fatal(monkeypatch, capsys):
+    monkeypatch.setattr(
+        provider_audit, "audit", lambda only: [("ollama", "unreachable", "not running")]
+    )
+    assert provider_audit.main([]) == 0
