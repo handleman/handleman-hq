@@ -4,7 +4,7 @@
 
 ## Phase timing (022 T1)
 `events.jsonl` is the only clock. Every crew records `crew_started`/`crew_done`
-with the role the flow set around the kickoff, and `swarm/phases.py` pairs them
+with the role the flow set around the kickoff, and `src/swarm/phases.py` pairs them
 (a stack, so nesting is safe) into `run.json.phases`:
 `{phase, started_at, ended_at, duration_seconds, failed, model}`. `make
 swarm-report` prints p50/p90 per phase and the slowest one, so a 20-minute task

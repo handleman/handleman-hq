@@ -13,7 +13,7 @@ tokens, LLM calls, and the models actually used. `run.json` gains:
 ```
 
 Local Ollama and `:free` models are exactly `$0`. A paid model with a known rate
-(`swarm/usage.py`) is estimated from tokens; an unknown paid rate reports
+(`src/swarm/usage.py`) is estimated from tokens; an unknown paid rate reports
 `cost_usd: null` / `cost=unknown` in the TUI instead of inventing a number.
 
 Budgets are env-driven and stop the pilot with `budget_exhausted`:

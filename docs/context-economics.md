@@ -2,7 +2,7 @@
 
 > Part of the swarm harness documentation. Start at [`../README.md`](../README.md).
 
-## Prompt assembly (`swarm/prompts.py`, 020 T2)
+## Prompt assembly (`src/swarm/prompts.py`, 020 T2)
 One module builds every per-task prompt, in two parts:
 
 ```
@@ -22,7 +22,7 @@ description = stable_prefix(task, spec_dir, kind) + "\n\n" + volatile part
   prefix. That is what makes provider prefix caching and Ollama KV reuse
   possible; the cache hints themselves land in 020 T3.
 - Agent copy (role/goal/backstory) lives in `prompts.agent_copy(task, kind)`;
-  `swarm/crew.py` only assembles CrewAI objects. `swarm/crew.py` re-exports the
+  `src/swarm/crew.py` only assembles CrewAI objects. `src/swarm/crew.py` re-exports the
   old names (`MAX_STEPS`, `SCOPE_RULE`, `FIX_RULES`, `parse_steps`, …) for the
   flow and the tests.
 - Measured at T2: +5.7% task prompt chars over the T1 baseline (the brief is
@@ -30,7 +30,7 @@ description = stable_prefix(task, spec_dir, kind) + "\n\n" + volatile part
   cacheability and one coherent head per task, not raw characters; T4/T5/T6 do
   the cutting.
 
-## Context compaction and gate-log spilling (`swarm/compaction.py`, 020 T4)
+## Context compaction and gate-log spilling (`src/swarm/compaction.py`, 020 T4)
 A fix round is the most expensive round, and it used to re-send everything:
 the concatenation of every step output plus up to 4k chars of raw tail per
 failing gate. Two rules keep it flat (`SWARM_CONTEXT_COMPACT=0` restores 019):
@@ -54,7 +54,7 @@ failing gate. Two rules keep it flat (`SWARM_CONTEXT_COMPACT=0` restores 019):
 Measured at T4: task prompt **427,725 chars (−7.4%)**, report **5,768 chars
 (−86%)** over the same 12 cases.
 
-## Gate selection (`swarm/gates.py`, 020 T5)
+## Gate selection (`src/swarm/gates.py`, 020 T5)
 A frontend-only delta does not need `pytest`; a Python delta does not need
 `svelte-check`. The inner loop now runs only what the delta can affect:
 
@@ -120,7 +120,7 @@ so the measured signal is `usage.cached_prompt_tokens`, not a request field.
 
 ## 020 knobs
 Every behaviour added in 020 has an off switch that restores the 019 behaviour;
-`make swarm-test` covers both paths.
+`make test` covers both paths.
 
 | Knob | Default | Effect |
 | --- | --- | --- |

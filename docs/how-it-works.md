@@ -6,7 +6,7 @@
 
 One task at a time: a `- [ ] T<n>` line from `specs/*/tasks.md` that the done
 ledger does not already hold. Each phase is a small CrewAI crew with its own
-model role; a CrewAI Flow (`swarm/flow.py`) sequences them and owns every
+model role; a CrewAI Flow (`src/swarm/flow.py`) sequences them and owns every
 decision that must not be made by a model (retries, scope, green, commit).
 
 ### Roles

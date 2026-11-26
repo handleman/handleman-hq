@@ -19,9 +19,9 @@ is telemetry, never a gate.
 | 0 docs | `docs/**`, `*.md` | prose and ADRs |
 | 1 tests | `tests/**`, `frontend/e2e/**` | tests and browser specs |
 | 2 logic | `app/**`, `frontend/src/**`, `contracts/**` | behaviour a user feels |
-| 3 control | `swarm/**`, `specs/**`, migrations, auth/payments/infra, config, unknown, empty delta | the harness, the specs, the process |
+| 3 control | `src/src/swarm/**`, `specs/**`, migrations, auth/payments/infra, config, unknown, empty delta | the harness, the specs, the process |
 
-`swarm/risk.py::classify` is conservative by construction: an empty or
+`src/swarm/risk.py::classify` is conservative by construction: an empty or
 unrecognised delta is 3, and a brief mentioning auth/payment/migration/infra/
 secret is 3 whatever the paths. The label lands in `run.json.risk`
 (`class`, `label`) even when the run is not green, so a stopped run still says
@@ -29,7 +29,7 @@ what kind of change it was attempting.
 
 ## The one hold left: `--require-approval`
 
-`./swarm/run.sh 007 T10 --require-approval` holds a green run at
+`./run.sh 007 T10 --require-approval` holds a green run at
 `awaiting_approval` for a look before the commit (dashboard `a`, or
 `make swarm-approve`; the held delta is committed through the normal merge
 queue, so the approval path is the same evidence). It is a per-run flag for a
@@ -46,7 +46,7 @@ harness specs are skipped). The first non-green task stops the whole loop
 `quota_exhausted`/`budget_exhausted`/`interrupted`/`preflight_failed` in that
 task's `run.json`). Flags: `--single` runs only the given task, `--no-commit`
 skips autocommit+push (passed through `run.sh`, e.g.
-`./swarm/run.sh 001 T1 --single`).
+`./run.sh 001 T1 --single`).
 
 ## Escape rate
 

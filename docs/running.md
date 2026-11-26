@@ -3,7 +3,7 @@
 > Part of the swarm harness documentation. Start at [`../README.md`](../README.md).
 
 ## Dashboard (Textual)
-`make swarm-dash` / `make swarm-up` open the parallel dashboard:
+`make dash` / `make up` open the parallel dashboard:
 
 - **Queue** (left): tasks in order, newest outcome per task from run history
   (`✓` green, `✗` needs_human, `⏸` approval, `⛔` quota/budget, `▶` current).
@@ -23,7 +23,7 @@
   reviewer output, gate transcript (including `npm run check`), changed files,
   and the last events. `H` replays this run's event history into the panes.
 
-Tail mode (`--tail swarm/runs/<id>`) follows `run.json` + `events.jsonl` of another
+Tail mode (`--tail runs/<id>`) follows `run.json` + `events.jsonl` of another
 process and jumps to the newest run automatically. It opens **fresh**: events logged
 before you attached are skipped, panes start empty, and each new task clears the
 previous task's log.
@@ -41,11 +41,11 @@ is not copy-pasteable, so the file is the artifact you attach to an issue:
 ```bash
 make swarm-log              # newest run
 make swarm-log RUN=<run dir>  # a specific run
-cat swarm/runs/<id>/human_log.txt | pbcopy
+cat runs/<id>/human_log.txt | pbcopy
 ```
 
 In the dashboard, `c` on the human-log screen copies the report to the clipboard.
-The screen and the file are the same renderer (`swarm/humanlog.py`), so they cannot
+The screen and the file are the same renderer (`src/swarm/humanlog.py`), so they cannot
 drift apart.
 
 The dashboard is a read-only view; `run.json`/`events.jsonl` stay the contract
@@ -53,12 +53,12 @@ The dashboard is a read-only view; `run.json`/`events.jsonl` stay the contract
 to a local Phoenix is the recommended add-on — the TUI is not a tracer.
 
 ## Resume from checkpoint
-`make swarm-up` / `./swarm/run.sh` with no args resumes where the sequence last stopped:
+`make up` / `./run.sh` with no args resumes where the sequence last stopped:
 latest run green → next task (or next spec); red, killed mid-run (`meta.json` only), or
 held (`awaiting_approval`) → same task again; everything green → exits with
 `all specs complete`. Explicit `SPEC TASK` args always override. Resolution lives in
 `_resume_point` (`--resume` flag). To release an approval hold, use
-`make swarm-approve SPEC=… TASK=…` (or `./swarm/run.sh SPEC TASK --approve`), then resume.
+`make swarm-approve SPEC=… TASK=…` (or `./run.sh SPEC TASK --approve`), then resume.
 
 A *phase* checkpoint (`progress.json`, and the journal's completed prefix) only skips
 micro-steps the next run can still vouch for, because run-delta attribution compares

@@ -4,9 +4,9 @@
 
 ## How the swarm builds its todo list
 
-The queue comes from `specs/product/*/tasks.md`, sorted by directory name (`001-…`, `004-…`, …):
+The queue comes from `specs/harness/*/tasks.md`, sorted by directory name (`001-…`, `004-…`, …):
 
-- `swarm/spec_loader.py` parses **only unchecked tasks** with this shape:
+- `src/swarm/spec_loader.py` parses **only unchecked tasks** with this shape:
   `- [ ] T1 (AC-1, AC-2): brief text`
   (regex: `^- \[ \] (T\d+)\s*(\([^)]*\))?\s*:\s*(.+)$`). `- [x]` tasks are invisible to the
   parser, and ids must be `T1`, `T2`, … — `T1a` is not recognized.
@@ -17,7 +17,7 @@ The queue comes from `specs/product/*/tasks.md`, sorted by directory name (`001-
 - The planner reads `specs/<kind>/<dir>/{spec,plan,tasks}.md` plus the constitution. The `brief` it
   receives is the text after the colon on the task line; indented notes below the line are fine
   but do not replace the brief.
-- Progress between invocations comes from `swarm/runs/` history (`_resume_point`): latest green
+- Progress between invocations comes from `runs/` history (`_resume_point`): latest green
   → next task/spec, red or killed → retry the same task. A checkpoint task that is already `[x]`
   (or was renamed) advances to the next open task; if the rest of the queue is done, resume wraps
   to the earliest open spec so newly added earlier-spec tasks are not stranded.
@@ -26,7 +26,7 @@ The queue comes from `specs/product/*/tasks.md`, sorted by directory name (`001-
 
 ## Adding a spec to the swarm todo list
 
-1. Create `specs/product/NNN-name/` (`NNN` controls queue position; a harness spec goes in
+1. Create `specs/harness/NNN-name/` (`NNN` controls queue position; a harness spec goes in
    `specs/harness/NNN-name/` and is never run) with:
    - `spec.md` — what/why, scope, acceptance criteria using stable ids (`AC-1`, `AC-2`, …).
    - `plan.md` — approach, ordered steps, risks; name the files you expect to change.
@@ -52,30 +52,30 @@ The queue comes from `specs/product/*/tasks.md`, sorted by directory name (`001-
    e.g. adding a `scripts/` prefix:
 
    ```bash
-   SWARM_SCOPE=app/,frontend/,tests/,scripts/ make swarm-up
+   SWARM_SCOPE=app/,frontend/,tests/,scripts/ make up
    ```
 
-   `swarm/`, `specs/`, `docs/`, and `.env*` are off-limits to the coder by design. The override
+   `src/swarm/`, `specs/`, `docs/`, and `.env*` are off-limits to the coder by design. The override
    **replaces** the defaults, so list every prefix the task needs (e.g. `app/,frontend/,tests/`,
    plus `pyproject.toml` if the task changes it).
 5. Start it explicitly the first time (or when the new spec sorts before the current checkpoint):
 
    ```bash
    make swarm-run SPEC=012 TASK=T1      # foreground, then continues through the queue
-   ./swarm/run.sh 012 T1 --single       # only this task
-   ./swarm/run.sh 012 T1 --no-commit    # do not autocommit/push
+   ./run.sh 012 T1 --single       # only this task
+   ./run.sh 012 T1 --no-commit    # do not autocommit/push
    ```
 
-   With no arguments, `make swarm-up` / `./swarm/run.sh` resumes from run history.
+   With no arguments, `make up` / `./run.sh` resumes from run history.
 6. The swarm **does not edit spec files**. After a green run is reviewed, change `- [ ]` to
    `- [x]` yourself — that removes it from the queue. Do not check a task before it is green:
    the parser will skip it and an explicit start on that id fails with
    `No task … (have: …)`.
 7. If you edit `spec.md`/`plan.md`/`tasks.md` after a plan was cached in
-   `swarm/runs/plans/<spec>-<task>.md`, force a fresh plan with `--replan`:
+   `runs/plans/<spec>-<task>.md`, force a fresh plan with `--replan`:
 
    ```bash
-   ./swarm/run.sh 012 T1 --replan
+   ./run.sh 012 T1 --replan
    ```
 
    Without it the cached `STEP` list is reused even if the spec changed.
@@ -86,8 +86,8 @@ Each run still has to pass the flow's own gates and scope check (`pytest`, `ruff
 (`swarm: <spec>-<task> green …`) before continuing.
 
 Each run writes:
-- `swarm/runs/<ts>-<pid>-<rand>/run.json` — spec, task, status (`green`/`needs_human`/`crew_error`/…), gate exit codes, usage (tokens/cost/timestamps).
-- `swarm/runs/<ts>/events.jsonl` — streamed agent events; `usage.json` when available.
+- `runs/<ts>-<pid>-<rand>/run.json` — spec, task, status (`green`/`needs_human`/`crew_error`/…), gate exit codes, usage (tokens/cost/timestamps).
+- `runs/<ts>/events.jsonl` — streamed agent events; `usage.json` when available.
 Tail mode follows the loop: when a newer run becomes `latest`, the dashboard jumps to it
 (task list + plan note re-sync). Plan validation: planner output without `STEP` lines fails
 the run instead of executing garbage. A run with no new in-scope changes recovers the same

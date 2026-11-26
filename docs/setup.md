@@ -10,21 +10,37 @@
   API path is paid — see the model table).
 
 ## Setup
+
+From a checkout (development):
+
 ```bash
-uv venv -p 3.12 swarm/.venv
-VIRTUAL_ENV="$PWD/swarm/.venv" uv pip install -p "$PWD/swarm/.venv/bin/python" -e 'swarm/[dev]'
+uv venv -p 3.12 .venv
+VIRTUAL_ENV="$PWD/.venv" uv pip install -p "$PWD/.venv/bin/python" -e '.[dev]'
 cp .env.example .env   # optional overrides (keys stay empty until you fill them)
-swarm/.venv/bin/python -c "from crewai import LLM,Agent,Task,Crew; print('ok')"
+.venv/bin/hq --version
 ```
 
-## Project-agnostic core
-The harness does not hardcode a language or framework. Gate commands come from
-`SWARM_GATE_COMMANDS` (semicolon/newline separated), scope from `SWARM_SCOPE`, and
-the coder prompt is stack-inferred. Point those at another project and the same
-flow works; only the guard *implementation* (`swarm/tools_guarded.py` path/secret
-rules) is repo-specific.
+As a dependency of a target repo (the normal case):
 
-## Model tiers (`swarm/llms.py` — the only file that picks models)
+```bash
+pip install 'handleman-hq[dev] @ git+https://github.com/handleman/handleman-hq@v0.3.3'
+cd your-repo && hq init        # writes a starter swarm.yaml
+hq preflight                   # every id, fallback, key, venv and gate binary
+```
+
+`.env` is read from the directory `hq` runs in (`SWARM_TARGET`), so one harness
+venv can drive several repos; the repo declares its shape in `swarm.yaml`.
+
+## Project-agnostic core
+The harness does not hardcode a language, framework or app. The target's
+`swarm.yaml` declares `specs_dir`, `scope`, `gates` (+ an affected-gate
+`gate_map`), `e2e` (command + spec root/dir), `risk` classes, `db`, `python.venv`
+and `lock_dir`. Environment overrides (`SWARM_GATE_COMMANDS`, `SWARM_SCOPE`,
+`SWARM_GATE_MAP`) win for one run. Drivers (browser suite, acceptance, health,
+bench, smoke, corridor probe) live under `swarm.drivers` and read the same
+contract; the core has no `app/` or `frontend/` strings.
+
+## Model tiers (`src/swarm/model_config.py` resolves; `llms.py` builds)
 
 Current operator profile (**OpenCode Go**, 2026-11-25): every role is a Go model
 with tool calling and every fallback is a second Go model, so a provider blip
@@ -61,7 +77,7 @@ fallback. Contributor/stealth tiers (`muse-spark-*-contributor`,
 
 `preflight` checks every id against the live Go catalogue
 (`SWARM_GO_BASE_URL/models`) before the first call, so a typo fails in seconds
-instead of mid-task. `swarm/usage.py` carries the prices (peak rate where a
+instead of mid-task. `src/swarm/usage.py` carries the prices (peak rate where a
 multiplier exists) so `SWARM_MAX_COST_PER_TASK` stays meaningful.
 
 ### Alternative profile: free OpenRouter tiers (2026-11-22, quota-capped)
@@ -101,7 +117,7 @@ What changes automatically, with no code edit:
   5 min) for a local profile, `SWARM_CREW_TIMEOUT_SECONDS` (default 300 s) for
   cloud. They are independent, so switching profiles never inherits the other
   side's cap; `SWARM_OLLAMA_TIMEOUT_SECONDS` (default 1800) bounds one generation.
-- **Cost** — every `ollama/*` model is $0 in `swarm/usage.py`, so `run.json.cost`
+- **Cost** — every `ollama/*` model is $0 in `src/swarm/usage.py`, so `run.json.cost`
   is a real `0.0`, not `null`.
 - **Guard** — `SWARM_ALLOW_PAID=0` keeps a paid id from being dialled; local ids
   never need the paid opt-in.
@@ -126,7 +142,7 @@ the Go prefix and key.
 `User-Agent` and an `x-opencode-session` header that the Go gateway asks for
 (it drives routing and prompt caching). Model ids are the bare console ids
 (`glm-5.3-flash`, `qwen3.8-flash`, `deepseek-v4.1-flash`, `kimi-k2.7-code`, …);
-prices live in `swarm/usage.py`, so `run.json.cost` stays a number.
+prices live in `src/swarm/usage.py`, so `run.json.cost` stays a number.
 
 Two Go caveats seen on 2026-11-15: `deepseek-v4.1-flash` is region-blocked until
 the workspace privacy setting is **Global** (Settings › Privacy › Regions), and
@@ -190,7 +206,7 @@ make swarm-db-status
 make swarm-db-down     # COLIMA=1 also stops colima
 ```
 
-While the container runs, `make test`, `make e2e`, `make swarm-run`, `make swarm-up`,
+While the container runs, `make test`, `make e2e`, `make swarm-run`, `make up`,
 `make swarm-bench-live` and `make swarm-replay*` get `DATABASE_URL` automatically
 (`$(DB_ENV)` in the Makefile) — the app reads the environment at import, not
 `.env`. Without it, the 005 repository tests and the three `preferences` e2e
@@ -199,12 +215,12 @@ specs skip. `make swarm-preflight` prints the database line but never fails on i
 ## Preflight (before the first LLM call)
 ```bash
 make swarm-preflight                              # roles/models, keys, Ollama pull, cloud lists, venvs, gates
-swarm/.venv/bin/python -m swarm.preflight --offline   # skip provider model-list requests
+.venv/bin/python -m swarm.preflight --offline   # skip provider model-list requests
 ```
 `run_crew` runs the same checks automatically and stops with `preflight_failed` if any fail
 (`SWARM_SKIP_PREFLIGHT=1` bypasses). This is 012 T12.
 
-Coder image: `swarm/ollama/Modelfile` (`FROM qwen3.5:9b`, temp 0, `num_ctx 65536`,
+Coder image: `ollama/Modelfile` (`FROM qwen3.5:9b`, temp 0, `num_ctx 65536`,
 baked SYSTEM discipline). Use it via `SWARM_CODER_MODEL=ollama/swarm-coder:latest`.
 Verified 2026-10-10: builds offline from local blobs, native tool calls work
 (with the harness's `think:false`). Tune `num_ctx`/SYSTEM in the Modelfile and rebuild.

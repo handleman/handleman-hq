@@ -6,7 +6,7 @@
 - Non-trivial steps (existing file, >1 file, frontend/type-checked path, logic/
   tests/API/DB wording, or any retry) use the paid coder.
 - Trivial steps (one new small file, mechanical wording) use the local coder;
-  a trivial step that fails is retried paid (`swarm/routing.py`).
+  a trivial step that fails is retried paid (`src/swarm/routing.py`).
 - `SWARM_LOCAL_FIRST=0` or `SWARM_PAID_ALWAYS=1` forces paid everywhere.
 - `usage.by_role` / `usage.by_step` record model, tokens, and cost per call;
   `SWARM_MAX_COST_PER_TASK` (0.15) and `SWARM_MAX_SECONDS_PER_TASK`
@@ -70,7 +70,7 @@ afterwards. Stashes never survive a run as loose entries:
 - **Orphans.** At kickoff the flow archives every `swarm-*` stash left by an
   earlier run (a crashed/killed run, or an old budget stop). Each becomes a
   permanent ref `refs/swarm/archive/<timestamp>-<sha>` and is appended to
-  `swarm/runs/orphan_stashes.json`, then dropped. The ref is readable with
+  `runs/orphan_stashes.json`, then dropped. The ref is readable with
   `git show <ref>:<path>` (GC-safe), so no landmine is left for a LIFO
   `stash pop` to apply to the wrong base.
 - **Conflicted restore is solved, not just recorded.** The parked work is
@@ -94,11 +94,11 @@ afterwards. Stashes never survive a run as loose entries:
   `SWARM_CONFLICT_CREW=0` disables both resolver crews.
 
 ### Unattended operation (015)
-- `make swarm-supervise` drives `./swarm/run.sh --resume`: retryable outcomes
+- `make swarm-supervise` drives `./run.sh --resume`: retryable outcomes
   (`interrupted`, transient `crew_error`, `quota_exhausted`, `budget_exhausted`,
   commit/push/merge failures) restart with exponential backoff; a task that
   exhausts `SWARM_SUPERVISE_ATTEMPTS` (default 3) is parked in
-  `swarm/runs/retry_later.json` and the queue skips it. `config_error` (HTML
+  `runs/retry_later.json` and the queue skips it. `config_error` (HTML
   body, 404/401/403, bad base URL, bad key) stops immediately.
 - Hygiene: out-of-scope writes are reverted (`out_of_scope_reverted`), unrelated
   dirty in-scope files are stashed before the run and restored after
@@ -135,7 +135,7 @@ Green is deliberately strict (012 AC-4/AC-6):
    Its verdict and any queued fix tasks are recorded in `run.json.acceptance`; the task is still
    recorded green in the done ledger, but the acceptance result flags regressions for the operator.
 
-Plan cache: planner output is saved to `swarm/runs/plans/<spec>-<task>.md` with a
+Plan cache: planner output is saved to `runs/plans/<spec>-<task>.md` with a
 `<!-- plan-source: sha256 -->` header over `spec.md`+`plan.md`+`tasks.md`. A changed spec
 invalidates the cache automatically; `--replan` still forces re-planning. Zero-step,
 malformed, or over-`MAX_STEPS` plans fail through the normal replan/`crew_error` path —

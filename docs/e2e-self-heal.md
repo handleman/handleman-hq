@@ -25,7 +25,7 @@ touch anything, and all refuse to let the fixer grade its own work.
 QA records a red suite
         │
         ▼
-TRIAGE (deterministic, no model)          swarm/e2e_triage.py
+TRIAGE (deterministic, no model)          src/swarm/drivers/e2e_triage.py
   env        → stop e2e_env               (no file edited)
   flaky      → stop e2e_flaky             (a retry passed)
   impl       → the code fix loop owns it  (spec edits refused)
@@ -33,7 +33,7 @@ TRIAGE (deterministic, no model)          swarm/e2e_triage.py
   drift      ┘                            (the element exists, the locator is stale)
         │
         ▼
-ROSTER  <run>/inner/{spec,plan,tasks}.md  swarm/inner.py
+ROSTER  <run>/inner/{spec,plan,tasks}.md  src/swarm/inner.py
   one `- [ ] T<n> (AC-…): brief` per failure, the queue's own format,
   scope = frontend/e2e/ only, ≤ SWARM_MAX_INNER_TASKS
         │
@@ -67,7 +67,7 @@ facts are captured with the run baseline, and `gate()` reverts and stops
 
 ## The guard that makes it safe
 
-`swarm/e2e_guard.py` compares the spec files before and after a repair:
+`src/swarm/drivers/e2e_guard.py` compares the spec files before and after a repair:
 
 - a test title that existed must still exist (no deletion, no rename-away);
 - no `test.skip(`, `test.fixme(` or `.only(` may be added;

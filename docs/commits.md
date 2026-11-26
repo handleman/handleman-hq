@@ -33,8 +33,8 @@ back to `--ours` (archived) if that is not provably safe. See
   hashes still match even when its line is still `- [ ]`; the swarm still never
   edits `specs/`. Editing the brief/ACs *or* `spec.md`/`plan.md` reopens the task.
   Marking `[x]` alone changes neither hash. A gitignored
-  `swarm/runs/done.json` cache covers shallow/rewritten history. An explicit
-  `./swarm/run.sh SPEC TASK` still runs that task even if done.
+  `runs/done.json` cache covers shallow/rewritten history. An explicit
+  `./run.sh SPEC TASK` still runs that task even if done.
 - **Approval resume.** An `awaiting_approval` run records `delta_hashes` and the
   current `head`. `make swarm-approve` / `--approve` / TUI `a` commits exactly
   that verified delta through the branch/merge queue, rewrites the run to `green`,
@@ -54,7 +54,7 @@ back to `--ours` (archived) if that is not provably safe. See
 ## Container sandbox (012 T17)
 ```bash
 make swarm-sandbox                       # build + run the pilot in Docker
-./swarm/sandbox.sh --dry-run 001 T3      # print the mount/run command, touch nothing
+./sandbox.sh --dry-run 001 T3      # print the mount/run command, touch nothing
 ```
 Needs a Docker daemon. On macOS without Docker Desktop, Colima works:
 ```bash
@@ -66,7 +66,7 @@ Verified 2026-11-08 with Colima (8 GB): image build, imports, the full 148-test
 harness suite inside the container, OpenRouter egress, Ollama via
 `host.docker.internal`, and a real coder+planner model call.
 
-The image (`swarm/docker/Dockerfile`) has app + harness deps and the gate binaries.
+The image (`docker/Dockerfile`) has app + harness deps and the gate binaries.
 At runtime the **only mounts are the repo** (`$PWD:/work`, rw) and a read-only
 `/dev/null` overlay on `.env`, so the coder process/tools cannot read secrets from
 the repo; keys arrive as env values via `--env-file`. No HOME, SSH agent, or host

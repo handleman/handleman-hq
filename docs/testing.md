@@ -4,7 +4,7 @@
 
 ## Unit tests (no LLM, no network)
 ```bash
-swarm/.venv/bin/python -m pytest swarm/tests -v
+.venv/bin/python -m pytest tests -v
 ```
 
 ## Browser e2e (`frontend/e2e`)
@@ -24,8 +24,8 @@ mounted in `App.svelte` (007-T10) and the prefs panel's select is the other
 failure.
 
 ## Replay bench (`make swarm-bench`, 020 T1)
-A frozen corpus of 12 historical green runs (`swarm/bench/corpus/*.json`) plus a
-committed pre-change snapshot (`swarm/bench/baseline.json`). It measures the
+A frozen corpus of 12 historical green runs (`src/swarm/drivers/bench/corpus/*.json`) plus a
+committed pre-change snapshot (`src/swarm/drivers/bench/baseline.json`). It measures the
 size of what the harness sends, not what a model answers, so it runs in seconds
 with no key and no network:
 
@@ -48,7 +48,7 @@ make swarm-bench ARGS="--json --case 006-comfort-plus-T3"
   normalised to the spec directory, exactly like the done ledger.
 - Exit codes: `1` = corpus missing or its digest no longer matches the baseline
   (rebuild and re-snapshot on purpose); `2` = the corpus could not be built.
-- The bench never calls a model, never writes outside `swarm/bench/` and never
+- The bench never calls a model, never writes outside `src/swarm/drivers/bench/` and never
   mutates git. Prompt text is model-independent; crews are built with
   `ollama/bench` for the duration of a measurement.
 
@@ -58,7 +58,7 @@ reaches green. `make swarm-bench-live CASE=006-comfort-plus-T3`:
 
 1. refuses a dirty tree, a linked worktree, or a case without `base_sha`;
 2. creates `git worktree add --detach <tmp> <green_sha^>`;
-3. copies the **current** `swarm/` package into it (never `.venv`, `runs`,
+3. copies the **current** `src/swarm/` package into it (never `.venv`, `runs`,
    `__pycache__` or `bench/corpus`);
 4. runs `python -m swarm.flow --spec <spec> --task <task> --no-commit --no-tui`
    with `PYTHONPATH=<tmp>`, `SWARM_BENCH=1` and the pinned models from
@@ -67,7 +67,7 @@ reaches green. `make swarm-bench-live CASE=006-comfort-plus-T3`:
    tokens, cost, fix rounds and gates; the worktree is removed on success and
    kept (path printed) on failure.
 
-It needs models and is never part of `make swarm-test`. Use a small case first;
+It needs models and is never part of `make test`. Use a small case first;
 `make swarm-bench ARGS=--list` shows the ids.
 
 ## Outcome replay suite (`make swarm-replay`, 021 T1)
@@ -80,14 +80,14 @@ tokens, cost and fix rounds:
 make swarm-replay                  # default 5 cases + delta vs replay_baseline.json
 make swarm-replay-off              # same cases, every 021 knob at its 020 value
 make swarm-replay-one CASE=004-weather-sun-T2   # one case, JSON details
-python -m swarm.bench.replay --update-baseline  # snapshot the first run
+python -m swarm.drivers.bench.replay --update-baseline  # snapshot the first run
 ```
 
 - `SWARM_REPLAY_CASES=case,case` overrides the selection;
   `SWARM_REPLAY_TIMEOUT` (default 2400 s) or `--timeout` bounds one case.
 - The suite is opt-in (models required, ~60 min for five cases) and never part of
-  `make swarm-test`; the bookkeeping is tested with a fake runner.
-- `swarm/bench/replay_baseline.json` stores the first run: case list, per-case
+  `make test`; the bookkeeping is tested with a fake runner.
+- `src/swarm/drivers/bench/replay_baseline.json` stores the first run: case list, per-case
   status/time/tokens/fix rounds, the totals and the harness commit.
 - `004-weather-sun-T2` is deliberately in the set: it is the case the 020 T8
   replay failed on (`verifier_blocked`), so it is the loop's current worst case.

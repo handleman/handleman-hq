@@ -65,7 +65,7 @@ cheap answer is almost always available before a judge is paid:
   writes its exception text, `human_log.txt` shows it as `error: …`, and
   preflight builds the crews' own factories (planner `allow_paid=True`, others
   follow `SWARM_ALLOW_PAID`) via `SWARM_PREFLIGHT_FACTORIES=0` to disable.
-- **One retry authority** (`swarm/crew.py`): every `Agent` is built with
+- **One retry authority** (`src/swarm/crew.py`): every `Agent` is built with
   `max_retry_limit=0`, so a provider outage costs the harness's 3 attempts, not
   20 nested calls.
 - **The queue explains itself** (`run.json.queue_reasons`): queue selection logs

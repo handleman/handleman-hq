@@ -7,10 +7,10 @@ Hard-won lessons from real runs — read before "fixing" the swarm. See [GLOSSAR
 - **Fallbacks are per role with one configurable local target.** A coder transport blip must never move QA: 007-T4 lost 30 minutes because one global `activate_fallbacks()` put the reviewer on `qwen3.5:9b`, which looped over the report and never declared a verdict. Now `SWARM_LOCAL_FALLBACK_MODEL` (default `ollama/swarm-coder:latest`) is the fallback for every role, `SWARM_<ROLE>_FALLBACK_MODEL` overrides per role, and only a provider-wide quota wall switches all roles at once. A missing QA verdict is decided by the senior model (`SWARM_SENIOR_MODEL`), never a paid one.
 - **Never conclude "the provider is slow" from one error string.** Measure: events carry `at`, and a 120.5 s failure is 2×60 s (one SDK retry), not a slow model. A *fix* generation is not a 1–7 s chat call — 60 s cut a real fix off twice in a row (007-T5), so the cloud timeout is 180 s with SDK retries off (the harness retries once and logs it).
 - **Statuses name the loop, not the task.** `needs_human`/`crew_error` usually mean the harness stopped itself; read `fix_rounds`, `dev_attempts`, `senior_used`, `evidence_note`, and the gate tails before blaming the code.
-- **A green task that "reopened" is usually a key mismatch.** 007-T5 was green on 2026-11-09 and re-ran the next morning because its trailer said `Swarm-Task: 007/T5` (the invocation prefix) while the queue looked up `007-live-position/T5`. Before assuming the spec changed, compare `git log --grep 'Swarm-Task:'` against `swarm/spec_loader.py` `spec_dir_name()`, and check `_open_task_ids()` in `swarm/flow.py`. **Check the ledger entry points at the artifact**: 007-T9's green commit (`1f4b3d9`) contains only Mapbox files — the integration test it claims was never written — so a hash match alone is not proof; `git show --stat <sha>` should show the files the brief names.
+- **A green task that "reopened" is usually a key mismatch.** 007-T5 was green on 2026-11-09 and re-ran the next morning because its trailer said `Swarm-Task: 007/T5` (the invocation prefix) while the queue looked up `007-live-position/T5`. Before assuming the spec changed, compare `git log --grep 'Swarm-Task:'` against `src/swarm/spec_loader.py` `spec_dir_name()`, and check `_open_task_ids()` in `src/swarm/flow.py`. **Check the ledger entry points at the artifact**: 007-T9's green commit (`1f4b3d9`) contains only Mapbox files — the integration test it claims was never written — so a hash match alone is not proof; `git show --stat <sha>` should show the files the brief names.
 - **Green means the gates passed, not that the task was done.** Six 014 tasks were committed green; T2's `GET /geocode` was never mounted in `app/main.py`, T7's client targets a path and a response key that the pinned contract does not use, T8 wired no selection, and T6/T9 never landed — all green, because a *missing* piece produces no failing assertion. Before trusting a green commit, compare the files it touched with the files the brief names, and check the endpoint is actually mounted (`grep '"/geocode' app/main.py`). A scenario verifier (spec 019) is the systematic answer.
 - **Watch which task a run actually is.** `meta.json` is authoritative: the queue advances past done-ledger entries, so `run.sh 007 T4` can execute T5. Checkpoints are plan-hashed (`restarting … plan changed`).
-- **A conflicted `git stash pop` is not a merge conflict.** 2026-11-10: T8 (014) popped its stash onto the base it had just merged and conflicted on `App.svelte`; the harness printed `STASH RESTORE FAILED`, kept the stash, and left three `UU` stages in the tree — the next three runs gated around conflict markers. Preflight now blocks on `git diff --diff-filter=U`, and the stash is always archived as `refs/swarm/archive/<stamp>-<sha>` with `stash_conflict`/`stash_conflict_ref` in `run.json`. A conflicted restore is **resolved**, not parked: a `Stash Conflict Resolver` crew (read + edit only) re-applies the parked side on the newer tree, accepted only when no marker remains, only conflicted files were edited, and every gate is green; otherwise it falls back to `--ours` and records `stash_conflict_resolution` (`crew`/`ours`/`kept`) + `stash_conflict_note`. Orphaned `swarm-*` stashes are swept at kickoff (archived as refs, indexed in `swarm/runs/orphan_stashes.json`, then dropped; `SWARM_ARCHIVE_STASHES=0` disables). No human step, and no user stash is ever touched — inspect with `git show <ref>:<path>`, never `git stash pop`.
+- **A conflicted `git stash pop` is not a merge conflict.** 2026-11-10: T8 (014) popped its stash onto the base it had just merged and conflicted on `App.svelte`; the harness printed `STASH RESTORE FAILED`, kept the stash, and left three `UU` stages in the tree — the next three runs gated around conflict markers. Preflight now blocks on `git diff --diff-filter=U`, and the stash is always archived as `refs/swarm/archive/<stamp>-<sha>` with `stash_conflict`/`stash_conflict_ref` in `run.json`. A conflicted restore is **resolved**, not parked: a `Stash Conflict Resolver` crew (read + edit only) re-applies the parked side on the newer tree, accepted only when no marker remains, only conflicted files were edited, and every gate is green; otherwise it falls back to `--ours` and records `stash_conflict_resolution` (`crew`/`ours`/`kept`) + `stash_conflict_note`. Orphaned `swarm-*` stashes are swept at kickoff (archived as refs, indexed in `runs/orphan_stashes.json`, then dropped; `SWARM_ARCHIVE_STASHES=0` disables). No human step, and no user stash is ever touched — inspect with `git show <ref>:<path>`, never `git stash pop`.
 - **A stuck task is usually a missing report, not a hard problem.** 007-T9 (2026-11-10) burned five fix rounds on a broken test file: the report was rendered in gate order and cut at 9000 chars, so the vitest failure never reached the coder. The report now puts failing gates first with extracted `file:line: message` key lines (14k budget), and a fix round that changes nothing ends the round (`no_progress`). Read the report the coder actually receives (`run.json.qa_report` → `report_text`) before blaming the model.
 - **Deterministic style failures are not coder work.** The harness repairs them itself: when the only red gate is a lint/format gate and its output names nothing but formatting, the flow runs `SWARM_STYLE_FIX_COMMAND` (`npm --prefix frontend run lint:fix`) and re-checks it (`run.json.style_autofix`). A red type check or red test is never treated as style — that is coder work.
 - **A type error is not a QA round-trip.** 007-T9 (2026-11-11) spent three QA rounds and two coder rounds on `Property 'tick' does not exist on type 'PositionProvider'`: the checker named the file, the line and the cause, and the fix rounds still did not land it (one round changed no file at all → `no_progress`). The harness now runs the static checks itself right after the micro-steps and gives the coder the same `file:line: message` report QA would have given him, before QA is invoked (`run.json.self_check`). When a run is "stuck on a linter bug", look for the self-check record first: if it is absent, the run predates 017 or the phase is off.
@@ -92,7 +92,7 @@ Hard-won lessons from real runs — read before "fixing" the swarm. See [GLOSSAR
   0–2 ms after an `npm ci` bumped Playwright: `chromium_headless_shell-1255` was
   missing. `e2e.browsers()` used `any(exists)` across the install locations, so
   a present full chromium hid the missing shell; every location must exist now
-  (`swarm/e2e.py`, test in `test_preflight.py`). Read the first failure's error
+  (`src/swarm/drivers/e2e.py`, test in `test_preflight.py`). Read the first failure's error
   text before touching tests.
 - **A crash inside the linter is not a coder failure.** `@typescript-eslint/
   no-unused-vars` threw `TypeError: Cannot read properties of undefined
@@ -120,7 +120,7 @@ Hard-won lessons from real runs — read before "fixing" the swarm. See [GLOSSAR
   `src/` mtimes before believing a QA finding.
 ## 043 Spec Acceptance (final greenlight)
 
-- New: `swarm/acceptance.py` — end-of-batch spec acceptance pass for product specs with built work.
+- New: `src/swarm/acceptance.py` — end-of-batch spec acceptance pass for product specs with built work.
   - picks specs that have ticked tasks (skips harness), builds frontend once, drives it via
     `frontend/scripts/acceptance.mjs`, checks each AC (exists/absent/count/text/value_set/route_request),
     global browser facts (tiles, leaflet, duplicate buttons, zero-size inputs, overflow,
@@ -128,12 +128,12 @@ Hard-won lessons from real runs — read before "fixing" the swarm. See [GLOSSAR
   - writes `<spec>/acceptance.md`, appends one unchecked `T<n>` fix task per failing AC
     (dedupe open `acceptance`-tasks), exits non-zero on FAIL.
   - wired into supervisor as AC-7: when queue drains (`outcome.action == "continue"`), runs
-    `make swarm-accept` (or `python -m swarm.acceptance [--no-vision] --no-queue ...`).
+    `make swarm-accept` (or `python -m swarm.drivers.acceptance [--no-vision] --no-queue ...`).
   - env overrides: `SWARM_ACCEPT=0` disables hook, `SWARM_ACCEPT_VISION=0` skips vision call,
     `SWARM_ACCEPT_QUEUE=0` only reports.
 - New: `frontend/scripts/acceptance.mjs` — Node Playwright runner reusing fixture backend
   (`ROUTE_FIXTURES=1`), two viewports, screenshots, deterministic checks, JSON output.
-- New: `swarm/tests/test_acceptance.py` — 26 unit tests covering parsing, discovery,
+- New: `tests/test_acceptance.py` — 26 unit tests covering parsing, discovery,
   merge, report, queue, vision.
 - Changelog: 758 swarm tests pass; 732 + 26 = 758 total.
 
@@ -194,7 +194,7 @@ recovered in seconds. Two lessons, both about signals the harness was missing.
   which reads exactly like a provider hang. The first diagnosis ("the Go API is
   slow") was wrong; the run's own `mono` timestamps proved a gap, not latency.
   *Improve:* (a) keep the host awake for the life of a flow —
-  `swarm/power.py` spawns `caffeinate -ims -w <pid>` on macOS
+  `src/swarm/power.py` spawns `caffeinate -ims -w <pid>` on macOS
   (`SWARM_KEEP_AWAKE=0` off, no-op elsewhere); (b) when consecutive events show
   a `mono` gap above a threshold with no tool activity, record
   `host_suspended` in `run.json` instead of a model error, so the operator sees

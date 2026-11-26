@@ -84,6 +84,12 @@ swarm.yaml.example  the contract, every key documented
 Driver relocation (browser suite/acceptance as the target's `drivers/`) and the
 full app migration land in v0.3. See `CHANGELOG.md` when present.
 
+## Contributing
+
+[`AGENTS.md`](AGENTS.md) has the rules for changing the factory: the contract is the
+only source of truth, green means recorded evidence, and judgement roles need
+reasoning models. `make test` and `make factory-audit` must pass before a push.
+
 ## License
 
 MIT — see [`LICENSE`](LICENSE).

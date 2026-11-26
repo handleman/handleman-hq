@@ -2,7 +2,7 @@
 
 > Part of the swarm harness documentation. Start at [`../README.md`](../README.md).
 
-## Agent tools (guarded, `swarm/tools_guarded.py`)
+## Agent tools (guarded, `src/swarm/tools_guarded.py`)
 - `Repo Edit` — exact-match replace, exactly-once occurrence required, repo jail, **coder-scope check**, secret-path refusal.
 - `Repo Create` — new files only (makes parent dirs, refuses existing/escapes), **coder-scope check**, secret-path refusal. Scaffold needs it: without it the coder cannot create `app/__init__.py` et al.
 - `Guarded Shell` — argv-only (`shlex.split` + `shell=False`, never `shell=True`): `pytest`, `ruff check` (including `--fix`), `mypy` (gates); `git status|diff|log` (read-only); `ls`, `cat`, `grep` (read-only inspection, no recursive grep); `npm --prefix frontend run check|build|lint|test`, plus `run format` (deterministic Prettier autofix in fix rounds). Rejects shell metacharacters, absolute paths, `..`, `.env*`/key files, `npm install`/`npx`, `pip`/`uv`, and `python -c`. 120 s timeout, repo cwd (300 s for the browser suite). The suite is argv-exact — `npm --prefix frontend run test:e2e [-- e2e/x.spec.ts]`, no flags, so a run cannot narrow it — and QA-only: it is the execution 026 requires for a task whose brief names `frontend/e2e/*`. It must be the npm *script* form: `run` gives Playwright cwd=`frontend/`, so `playwright.config.ts` (baseURL, fixture backend, `vite preview`) loads; the `exec` form keeps the repo cwd and fails every test on `page.goto('/')`. Coder crews construct it with `allow_gates=False` (QA-only gates); fix crews and the Reviewer get `allow_gates=True`.
@@ -20,7 +20,7 @@ command from `SWARM_GATE_COMMANDS` (this repo: `pytest -q`, `ruff check .`,
 recorded executions — never from agent prose (see *Gate ownership* below). Red
 gates or a reviewer `BLOCKED` → fix
 round: Coder investigates with the QA report (+ Reviewer re-verify), max 3 rounds
-(`MAX_FIX_ROUNDS` in `swarm/crew.py`). Still red → `needs_human`, TUI pauses,
+(`MAX_FIX_ROUNDS` in `src/swarm/crew.py`). Still red → `needs_human`, TUI pauses,
 `r` starts a fresh run. Crash → one fresh re-kickoff, then `crew_error`.
 
 ### Gate ownership (who runs what)
@@ -32,7 +32,7 @@ round: Coder investigates with the QA report (+ Reviewer re-verify), max 3 round
   with `allow_gates=False` and answers `BLOCKED: gates are QA-only`. A fix round
   starts only after QA `BLOCKED` (or red flow gates); then the coder gets
   `allow_gates=True` plus the QA report and may reproduce/confirm the fix
-  (`VERIFY_RULE`/`MAX_FIX_VERIFY_CYCLES` in `swarm/crew.py`) and keeps fixing until
+  (`VERIFY_RULE`/`MAX_FIX_VERIFY_CYCLES` in `src/swarm/crew.py`) and keeps fixing until
   every gate it ran is green (3 cycles max). This keeps QA the single verification owner
   without spending coder tokens on duplicate gate calls.
 - **The harness records what QA actually ran** (015 AC-2). Every `Guarded Shell`
@@ -62,7 +62,7 @@ round: Coder investigates with the QA report (+ Reviewer re-verify), max 3 round
   (`file:line: message`) extracted from the tail; passing gates are one line
   each. 007-T9 (2026-11-10) lost its vitest failure to the old 9000-char
   report cap, so the coder "fixed" a file it never saw. The budget is now
-  14k chars with a 3k tail per failing gate (`swarm/evidence.py`).
+  14k chars with a 3k tail per failing gate (`src/swarm/evidence.py`).
 - **A style-only failure is repaired by the harness, not by a coder round.**
   When the *only* red gate is a lint/format gate and its output names nothing
   but formatting (`prettier`, or an ESLint rule that `eslint --fix` repairs),
