@@ -75,6 +75,15 @@ until they diverge. v0.4.0 released.
   check's target and fails a check that still passes; the report lists it.
   **Verified on the app: 14/14 strict + selftest, no always-passing check.**
 
+## Now — design support (057)
+
+The operator is preparing a Figma design. The queue must implement frames from
+a committed, versioned cache (REST + `hq design sync`), while the human lane
+uses Figma's remote MCP through OpenCode. Spec: `057-figma-design-support/`
+(spec + plan + tasks). Key decisions: MCP is for the operator, REST + cache is
+for the queue; design checks (tokens/regions/screenshot diff) are deterministic
+and the vision pass stays advisory; a stale cache is a typed stop.
+
 ## Open questions
 
 - `[x]` **Subscription ergonomics** — shipped `examples/litellm-proxy/` (compose +
