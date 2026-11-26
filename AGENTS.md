@@ -8,8 +8,8 @@ it consumes this package — it does not vendor it.
 ## Rules
 
 - **One source of truth for the target.** `swarm.yaml` (loaded by
-  `src/swarm/contract.py`) decides specs dir, scope, gates, e2e, risk, db and the
-  python venv. Never hardcode a target path in the core; drivers may, and only
+  `src/swarm/contract.py`) decides specs dir, scope, gates, e2e, risk, db, the
+  python venv and where run traces go (`runs_dir`). Never hardcode a target path in the core; drivers may, and only
   through the contract.
 - **Green means evidence.** A task is green only when the reviewer's recorded gate
   exits are 0, the verifier passed and the full suite ran at the final delta.

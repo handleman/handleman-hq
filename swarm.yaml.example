@@ -40,6 +40,10 @@ risk:
     2: [app/, frontend/src/]
     3: [swarm/, specs/, migrations/]
 
+# Where run traces go (default swarm/runs; a packaged harness consuming app
+# usually sets harness/runs).
+runs_dir: swarm/runs
+
 # Optional integrations.
 db:
   script: swarm/db.sh
