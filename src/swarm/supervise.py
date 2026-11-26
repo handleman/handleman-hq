@@ -20,10 +20,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from swarm import contract
 from swarm.paths import REPO_ROOT
 from swarm.spec_loader import task_key
 
-RUNS = REPO_ROOT / "swarm" / "runs"
+RUNS = contract.current(REPO_ROOT).runs_path()
 RETRY_LATER = RUNS / "retry_later.json"
 STOP_FILE = REPO_ROOT / "swarm" / "STOP"
 

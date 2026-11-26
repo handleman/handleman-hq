@@ -18,9 +18,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from swarm import contract
 from swarm.paths import REPO_ROOT
 
-RUNS_DIR = REPO_ROOT / "swarm" / "runs"
+RUNS_DIR = contract.current(REPO_ROOT).runs_path()
 REPORT_NAME = "human_log.txt"
 MAX_EVENTS = 80
 MAX_TAIL = 2500

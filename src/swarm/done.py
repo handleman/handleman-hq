@@ -71,7 +71,9 @@ def _key(spec_dir: str, task_id: str) -> str:
 
 
 def _cache_path(repo_root: Path) -> Path:
-    return repo_root / "swarm" / "runs" / "done.json"
+    from swarm import contract
+
+    return contract.current(repo_root).runs_path() / "done.json"
 
 
 def _read_cache(repo_root: Path) -> dict[str, dict[str, str]]:

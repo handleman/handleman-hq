@@ -12,9 +12,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from swarm import contract
 from swarm.paths import REPO_ROOT
 
-RUNS = REPO_ROOT / "swarm" / "runs"
+RUNS = contract.current(REPO_ROOT).runs_path()
 
 
 def collect(runs: Path = RUNS) -> list[dict[str, Any]]:

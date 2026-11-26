@@ -241,7 +241,7 @@ def _role_provider(role: str) -> str:
 
 
 def _runs_dir() -> Path:
-    return Path(REPO_ROOT) / "swarm" / "runs"
+    return contract.current(REPO_ROOT).runs_path()
 
 
 def _safe_key(value: str) -> str:
@@ -987,7 +987,7 @@ def _previous_run(
     current_run: Path | None,
 ) -> Path | None:
     """Newest earlier run for the same spec/task."""
-    runs = repo_root / "swarm" / "runs"
+    runs = contract.current(repo_root).runs_path()
     if not runs.is_dir():
         return None
     dirs = sorted(
@@ -1077,7 +1077,7 @@ def load_checkpoint(
 
 def _find_held_run(repo_root: Path, spec_dir: str, task_id: str) -> Path | None:
     """Newest run for this task still parked at `awaiting_approval`."""
-    runs = repo_root / "swarm" / "runs"
+    runs = contract.current(repo_root).runs_path()
     if not runs.is_dir():
         return None
     dirs = sorted(
@@ -1271,7 +1271,9 @@ class SwarmFlow(Flow[SwarmState]):
         self.kill_stale_tui_processes()
         self._lock = RunLock(_runs_dir() / ".lock")
         if not self._lock.acquire():
-            raise SystemExit("another swarm run is active (lock: swarm/runs/.lock)")
+            raise SystemExit(
+                f"another swarm run is active (lock: {contract.current(REPO_ROOT).runs_dir}/.lock)"
+            )
         # 046 AC-5: if we reclaimed a dead-PID lock, record it in run.json.
         if self._lock.lock_reclaimed:
             self.state.lock_stale = {
@@ -2971,7 +2973,7 @@ class SwarmFlow(Flow[SwarmState]):
         if not dirty:
             return {}
         owned: dict[str, str] = {}
-        runs = REPO_ROOT / "swarm" / "runs"
+        runs = contract.current(REPO_ROOT).runs_path()
         if not runs.is_dir():
             return {}
         dirs = sorted(
@@ -4825,7 +4827,7 @@ def _last_checkpoint_task(repo_root: Path) -> tuple[str, str] | None:
     `--approve` with no explicit spec/task uses this so `make swarm-approve`
     releases the task that is actually waiting, not a hardcoded default.
     """
-    runs = repo_root / "swarm" / "runs"
+    runs = contract.current(repo_root).runs_path()
     if not runs.is_dir():
         return None
     candidates: list[Path] = []
@@ -4861,7 +4863,7 @@ def _retry_later_keys(repo_root: Path | None = None) -> set[str]:
     from swarm.spec_loader import task_key
 
     root = repo_root or REPO_ROOT
-    runs = root / "swarm" / "runs"
+    runs = contract.current(root).runs_path()
     try:
         data = json.loads((runs / "retry_later.json").read_text())
     except (OSError, json.JSONDecodeError):
@@ -4897,7 +4899,7 @@ def _resume_point(repo_root: Path) -> tuple[str, str] | None:
     """
     from swarm.spec_loader import load_spec_tasks
 
-    runs = repo_root / "swarm" / "runs"
+    runs = contract.current(repo_root).runs_path()
     if not runs.is_dir():
         return None
     dirs = sorted(p for p in runs.iterdir() if p.is_dir() and p.name[:1].isdigit())

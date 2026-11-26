@@ -39,6 +39,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from swarm import contract as _contract
 from swarm.paths import REPO_ROOT
 
 DISABLE_ENV = "SWARM_ACCEPT"
@@ -742,7 +743,7 @@ def served_app(
                 "MAPBOX_TOKEN": env.get("MAPBOX_TOKEN") or "acceptance-fixtures-token",
             }
         )
-        log_path = root / "swarm" / "runs" / "acceptance-server.log"
+        log_path = _contract.current(root).runs_path() / "acceptance-server.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         handle = log_path.open("w")
         logs.append(handle)
@@ -909,7 +910,7 @@ def run(
         return AcceptanceRun("UNVERIFIED", [], 0)
 
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    out_dir = root / "swarm" / "runs" / "acceptance" / stamp
+    out_dir = _contract.current(root).runs_path() / "acceptance" / stamp
     out_dir.mkdir(parents=True, exist_ok=True)
     runner = browser_runner or (lambda plan: run_browser(plan, repo=root))
     reports: list[SpecReport] = []

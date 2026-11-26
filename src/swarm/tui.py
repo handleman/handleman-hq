@@ -37,6 +37,8 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Footer, Header, ListItem, ListView, Log, Static
 
+from swarm import contract
+
 # The token/cost/duration formatters live in `swarm.humanlog` (018) so the
 # dashboard and the written report cannot format a number two different ways.
 from swarm.humanlog import fmt_cost, fmt_duration, fmt_tokens
@@ -427,7 +429,7 @@ def queue_marks(runs: list[dict[str, Any]], spec: str) -> dict[str, str]:
 
 def scan_runs(repo_root: Path, limit: int = 300) -> list[dict[str, Any]]:
     """All run.json records, newest first (read-only; skips unreadable dirs)."""
-    runs_dir = repo_root / "swarm" / "runs"
+    runs_dir = contract.current(repo_root).runs_path()
     if not runs_dir.is_dir():
         return []
     dirs = sorted(
@@ -471,7 +473,7 @@ def _env_float(name: str, default: float) -> float:
 
 def run_dirs(repo_root: Path, limit: int = 200) -> list[Path]:
     """Run directories, newest first (excludes plans/probes/approvals)."""
-    runs = repo_root / "swarm" / "runs"
+    runs = contract.current(repo_root).runs_path()
     if not runs.is_dir():
         return []
     return sorted(
@@ -634,7 +636,7 @@ class SwarmTUI(App[None]):
                 spec, task_id = meta.get("spec", spec), meta.get("task", task_id)
             except Exception:
                 pass
-        plans = REPO_ROOT / "swarm" / "runs" / "plans"
+        plans = contract.current(REPO_ROOT).runs_path() / "plans"
         cached: Path | None = None
         if plans.is_dir():
             cands = sorted(plans.glob(f"*-{task_id}.md"))
@@ -777,7 +779,7 @@ class SwarmTUI(App[None]):
         # While pinned to history (p/n), never yank the view forward.
         if not self._pinned:
             try:
-                cur = (REPO_ROOT / "swarm" / "runs" / "latest").read_text().strip()
+                cur = (contract.current(REPO_ROOT).runs_path() / "latest").read_text().strip()
                 want = self._run_dir.parent / cur
                 if cur and want.is_dir() and want != self._run_dir:
                     self._run_dir = want
@@ -982,8 +984,8 @@ class SwarmTUI(App[None]):
         run_dir = self._run_dir
         if run_dir is None:
             try:
-                run_dir = REPO_ROOT / "swarm" / "runs" / (
-                    REPO_ROOT / "swarm" / "runs" / "latest"
+                run_dir = contract.current(REPO_ROOT).runs_path() / (
+                    contract.current(REPO_ROOT).runs_path() / "latest"
                 ).read_text().strip()
             except OSError:
                 return None

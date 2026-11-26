@@ -37,6 +37,7 @@ DEFAULT_FRONTEND_DIRS: tuple[str, ...] = ("src/", "ui/", "lib/")
 DEFAULT_E2E_ROOT = ""
 DEFAULT_E2E_DIR = "e2e"
 DEFAULT_LOCK_DIR = ""
+DEFAULT_RUNS_DIR = "swarm/runs"
 DEFAULT_GATES: tuple[str, ...] = ()
 # Affected-gate selection: a glob → the gates that delta can break. Moved here
 # from gates.DEFAULT_MAP so the factory and the app share one declaration.
@@ -111,6 +112,7 @@ class Contract:
     e2e_root: str = DEFAULT_E2E_ROOT
     e2e_dir: str = DEFAULT_E2E_DIR
     lock_dir: str = DEFAULT_LOCK_DIR
+    runs_dir: str = DEFAULT_RUNS_DIR
     gate_map: tuple[tuple[str, tuple[str, ...]], ...] = DEFAULT_GATE_MAP
     risk_classes: dict[int, tuple[str, ...]] = field(
         default_factory=lambda: dict(DEFAULT_RISK_CLASSES)
@@ -127,6 +129,11 @@ class Contract:
         return "/".join(
             part for part in (self.e2e_root.strip("/"), str(file).lstrip("/")) if part
         )
+
+    def runs_path(self, root: Path | str | None = None) -> Path:
+        """Where run traces live (`harness/runs` in an app, `swarm/runs` here)."""
+        base = Path(root) if root is not None else self.root
+        return base / self.runs_dir
 
     def path(self, *parts: str) -> Path:
         """A path inside the target repo."""
@@ -225,6 +232,7 @@ def load(root: Path | None = None, *, text: str | None = None) -> Contract:
         e2e_root=e2e_root,
         e2e_dir=e2e_dir,
         lock_dir=_as_str(raw.get("lock_dir"), "lock_dir"),
+        runs_dir=_as_str(raw.get("runs_dir"), "runs_dir") or DEFAULT_RUNS_DIR,
         gate_map=_gate_map(raw.get("gate_map")) or DEFAULT_GATE_MAP,
         source=source,
         extra=extra,
@@ -306,6 +314,7 @@ def main() -> int:
     print(f"harness    {len(contract.harness_specs)} spec(s)")
     print(f"gate_map   {len(contract.gate_map)} rule(s)")
     print(f"e2e        {contract.e2e_prefix()}")
+    print(f"runs       {contract.runs_dir}")
     return 0
 
 
