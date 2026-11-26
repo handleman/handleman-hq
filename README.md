@@ -93,6 +93,12 @@ See [`specs/harness/ROADMAP.md`](specs/harness/ROADMAP.md): the provider matrix
 (055) first, then moving the drivers into target repos (v0.4), then acceptance
 coverage and the per-task visual phase.
 
+## Subscription plans
+
+Claude Pro/Max, ChatGPT/Codex and Copilot are usable through a local LiteLLM
+proxy — see [`examples/litellm-proxy/`](examples/litellm-proxy/README.md). API
+keys plug in directly ([`docs/providers.md`](docs/providers.md)).
+
 ## Contributing
 
 [`AGENTS.md`](AGENTS.md) has the rules for changing the factory: the contract is the

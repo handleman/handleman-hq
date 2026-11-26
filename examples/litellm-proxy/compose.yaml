@@ -1,0 +1,23 @@
+# Local LiteLLM proxy for subscription plans (Claude Pro/Max, ChatGPT/Codex,
+# GitHub Copilot). The harness talks to it as a generic OpenAI-compatible
+# endpoint, so no provider credential ever reaches the factory.
+#
+#   docker compose up -d
+#   # then in your .env:
+#   #   SWARM_CODER_MODEL=openai_compatible/claude-sonnet
+#   #   OPENAI_COMPATIBLE_BASE=http://localhost:4000/v1
+#   #   OPENAI_COMPATIBLE_API_KEY=sk-local-proxy
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    ports: ["4000:4000"]
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-local-proxy}
+      # API-key providers can be passed through here; subscriptions are connected
+      # in the proxy dashboard (http://localhost:4000/ui) instead.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    restart: unless-stopped

@@ -150,8 +150,10 @@ LiteLLM proxy** (docs.litellm.ai/docs/subscriptions):
 - **Cursor CLI** — proxy relay.
 
 Pattern: start the proxy (`litellm --config …`), create a proxy key, then in
-`.env` set `SWARM_CODER_MODEL=<proxy alias>` and let the proxy own the
-subscription. The factory never sees your personal token.
+`.env` set `SWARM_CODER_MODEL=openai_compatible/<alias>` with
+`OPENAI_COMPATIBLE_BASE=http://localhost:4000/v1`. The factory never sees your
+personal token. Copy-paste setup:
+[`examples/litellm-proxy/`](../examples/litellm-proxy/README.md).
 
 > If you cannot create a Claude or Copilot account, use a provider key you *can*
 > get (OpenRouter has free models), or run locally. The harness does not pretend

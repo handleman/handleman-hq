@@ -1,0 +1,16 @@
+# Aliases the harness can point a role at. `github_copilot/*` and the other
+# subscription routes are connected once in the proxy dashboard; the alias then
+# uses the connected account.
+model_list:
+  - model_name: claude-sonnet
+    litellm_params:
+      model: anthropic/claude-sonnet-5
+  - model_name: copilot-sonnet
+    litellm_params:
+      model: github_copilot/claude-sonnet-5
+  - model_name: gpt-5
+    litellm_params:
+      model: openai/gpt-5
+
+litellm_settings:
+  drop_params: true
