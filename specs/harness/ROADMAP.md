@@ -64,6 +64,11 @@ until they diverge. v0.4.0 released.
 13. `[x]` **048 T20** — `make swarm-accept --strict` passes 14/14 (the `--selftest`
     oracle check is the remaining v0.5 hardening, not a coverage gap).
 
+## Done — v0.5 hardening
+
+- `[x]` Oracle self-test in the factory: `acceptance --selftest` mutates each
+  check's target and fails a check that still passes; the report lists it.
+
 ## Open questions
 
 - `[x]` **Subscription ergonomics** — shipped `examples/litellm-proxy/` (compose +

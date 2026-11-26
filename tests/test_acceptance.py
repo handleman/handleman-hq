@@ -510,3 +510,25 @@ def test_strict_makes_an_uncovered_ac_fatal(monkeypatch):
     assert report.verdict == "PASS"
     monkeypatch.setenv("SWARM_ACCEPT_STRICT", "1")
     assert report.verdict == "FAIL"
+
+
+def test_an_always_passing_check_fails_the_spec():
+    from swarm.drivers.acceptance import SpecReport
+
+    report = SpecReport(spec="x", title="x", criteria=[], checks=[])
+    report.ac_verdicts = {"AC-1": {"verdict": "pass", "evidence": "", "source": "probe"}}
+    report.oracle = [{"ac": "AC-1", "kind": "exists", "verdict": "always_passes"}]
+    assert report.verdict == "FAIL"
+    assert report.oracle_failures
+
+
+def test_an_ok_or_unsupported_oracle_does_not_fail():
+    from swarm.drivers.acceptance import SpecReport
+
+    report = SpecReport(spec="x", title="x", criteria=[], checks=[])
+    report.ac_verdicts = {"AC-1": {"verdict": "pass", "evidence": "", "source": "probe"}}
+    report.oracle = [
+        {"ac": "AC-1", "kind": "exists", "verdict": "ok"},
+        {"ac": "AC-2", "kind": "absent", "verdict": "unsupported"},
+    ]
+    assert report.verdict == "PASS"

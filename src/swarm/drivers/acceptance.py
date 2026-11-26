@@ -109,10 +109,13 @@ class SpecReport:
     queued: list[str] = field(default_factory=list)
     not_applicable: dict[str, str] = field(default_factory=dict)
     config_errors: list[str] = field(default_factory=list)
+    oracle: list[dict[str, str]] = field(default_factory=list)
 
     @property
     def verdict(self) -> str:
         if self.global_failures or self.layout_failures:
+            return "FAIL"
+        if self.oracle_failures:
             return "FAIL"
         verdicts = [entry.get("verdict") for entry in self.ac_verdicts.values()]
         if "fail" in verdicts:
@@ -122,6 +125,11 @@ class SpecReport:
         if "pass" in verdicts:
             return "PASS"
         return "UNVERIFIED"
+
+    @property
+    def oracle_failures(self) -> list[dict[str, str]]:
+        """Checks that pass even when their target is gone (054 AC-3)."""
+        return [entry for entry in self.oracle if entry.get("verdict") == "always_passes"]
 
     @property
     def counts(self) -> dict[str, int]:
@@ -445,6 +453,13 @@ def render_report(report: SpecReport, *, generated: str | None = None) -> str:
             f"| {ac} | {entry.get('verdict', 'unverified').upper()} | "
             f"{entry.get('source', 'none')} | {_cell(entry.get('evidence', ''))} |"
         )
+    if report.oracle:
+        lines += ["", "## Oracle self-test", "", "| AC | Kind | Verdict | Detail |", "| --- | --- | --- | --- |"]
+        for entry in report.oracle:
+            lines.append(
+                f"| {entry.get('ac', '')} | {entry.get('kind', '')} | "
+                f"{str(entry.get('verdict', '')).upper()} | {_cell(entry.get('detail', ''))} |"
+            )
     if report.config_errors:
         lines += ["", "## Configuration", ""]
         lines += [f"- **WARN** {item}" for item in report.config_errors]
@@ -638,7 +653,7 @@ class BrowserError(RuntimeError):
 
 
 def browser_plan(
-    specs: list[Path], *, base_url: str, out_dir: Path
+    specs: list[Path], *, base_url: str, out_dir: Path, selftest: bool = False
 ) -> dict[str, Any]:
     checks = []
     for spec in specs:
@@ -681,6 +696,7 @@ def browser_plan(
             for name, width, height in VIEWS
         ],
         "checks": checks,
+        "selftest": bool(selftest),
         "layout": layout_specs,
     }
 
@@ -927,6 +943,7 @@ def run(
     browser_runner: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
     vision_judge: Callable[[SpecReport], Mapping[str, Any]] | None = None,
     commit: bool | None = None,
+    selftest: bool = False,
 ) -> AcceptanceRun:
     """Run the pass; never raises for a failing requirement (the verdict says it)."""
     from swarm.spec_loader import resolve_spec_dir
@@ -954,7 +971,7 @@ def run(
         url = base_url
         if url is None:
             url = stack.enter_context(served_app(repo=root, build=build, log=log))
-        plan = browser_plan(chosen, base_url=url, out_dir=out_dir)
+        plan = browser_plan(chosen, base_url=url, out_dir=out_dir, selftest=selftest)
         browser = dict(runner(plan))
 
     for spec_dir in chosen:
@@ -993,6 +1010,11 @@ def run(
                 ],
                 report.vision,
             )
+        report.oracle = [
+            dict(entry)
+            for entry in (browser.get("selftest") or [])
+            if str(entry.get("spec")) == spec_dir.name
+        ]
         report.not_applicable = load_not_applicable(spec_dir)
         for ac, note in report.not_applicable.items():
             report.ac_verdicts[ac] = {"verdict": "n/a", "evidence": note, "source": "declared"}
@@ -1056,6 +1078,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-queue", action="store_true", help="do not append fix tasks")
     parser.add_argument("--no-build", action="store_true", help="reuse frontend/dist")
     parser.add_argument(
+        "--selftest",
+        action="store_true",
+        help="prove every check can fail (mutate its target); a always-passing check fails the spec",
+    )
+    parser.add_argument(
         "--strict",
         action="store_true",
         help="fail the pass when an AC has no check or not_applicable entry",
@@ -1074,6 +1101,7 @@ def main(argv: list[str] | None = None) -> int:
         queue=not args.no_queue,
         build=not args.no_build,
         base_url=args.base_url,
+        selftest=args.selftest,
     )
     return result.exit_code
 
