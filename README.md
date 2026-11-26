@@ -6,12 +6,16 @@ free cloud, or all-local Ollama, chosen entirely by `.env` — and **repo-agnost
 — point it at any checkout with a `swarm.yaml`.
 
 ```bash
-pip install -e '.[dev]'          # or: pip install git+https://github.com/handleman/handleman-hq@v0.2.0
+pipx install "git+https://github.com/handleman/handleman-hq@v0.6.5"
 cd your-repo
 hq init                           # writes a starter swarm.yaml
-hq preflight                      # every model id, fallback, key and gate binary
+hq preflight                      # every model id, fallback, key, gate and design cache
 hq run --spec 040 --task T6        # one task; green merges itself
 ```
+
+New here? Read **[`docs/install.md`](docs/install.md)** — installable-package
+setup (pipx/venv), the target contract, Figma, upgrades and troubleshooting.
+For a source checkout use `pip install -e '.[dev]'`.
 
 ## Why it exists
 
@@ -64,6 +68,7 @@ Both write a committed design cache that the run reads offline. See
 
 ## Documentation
 
+- [`docs/install.md`](docs/install.md) — **install the package (pipx/venv)**, configure a target, run, upgrade.
 - [`docs/how-it-works.md`](docs/how-it-works.md) — roles, phase order, the flow diagram, the invariant.
 - [`docs/setup.md`](docs/setup.md) — venv, model tiers/routing, preflight.
 - [`docs/model-usage.md`](docs/model-usage.md) — which kind of model each role needs; **review needs reasoning**.
