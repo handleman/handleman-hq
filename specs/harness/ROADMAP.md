@@ -68,6 +68,7 @@ until they diverge. v0.4.0 released.
 
 - `[x]` Oracle self-test in the factory: `acceptance --selftest` mutates each
   check's target and fails a check that still passes; the report lists it.
+  **Verified on the app: 14/14 strict + selftest, no always-passing check.**
 
 ## Open questions
 
