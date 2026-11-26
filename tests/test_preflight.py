@@ -381,7 +381,7 @@ def test_probe_classification_without_a_key():
         200: "reachable",
         401: "auth-required",
         403: "auth-required",
-        404: "wrong-base",
+        404: "wrong-base",  # the probe URL ends in /models
         308: "wrong-base",
         503: "incident",
     }
@@ -422,7 +422,8 @@ def test_probe_problems_only_on_real_faults():
     assert any("unreachable" in p and "DNS failure" in p for p in problems)
 
 
-def test_a_key_that_the_provider_rejects_is_a_problem():
+def test_a_401_probe_is_reachable_not_a_problem():
+    """The probe never sends a key, so it cannot judge one; probe_roles does."""
     env = dict(PAID)
     problems = [
         str(p)
@@ -431,4 +432,4 @@ def test_a_key_that_the_provider_rejects_is_a_problem():
             status=lambda url: (401, ""),
         )
     ]
-    assert any("configured key was rejected" in p for p in problems)
+    assert not any("probe" in p for p in problems)

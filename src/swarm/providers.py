@@ -251,12 +251,11 @@ def probe_url(name: str, env: dict[str, str] | None = None) -> str:
         return ""
     base = str(source.get(provider.base_env, "")).strip() if provider.base_env else ""
     base = (base or provider.default_base).rstrip("/")
-    if provider.name == "openrouter":
-        return f"{base}/models"
-    if provider.name == "sambanova":
-        return f"{base}/models"
     if provider.kind == "local":
         return f"{base}/api/tags" if provider.name == "ollama" else f"{base}/models"
+    if provider.catalogue in {"public", "keyed"}:
+        # A list endpoint answers 401/403 without a key — the signal we want.
+        return f"{base}/models"
     return base or ""
 
 

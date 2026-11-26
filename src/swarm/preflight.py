@@ -136,7 +136,11 @@ def probe_provider(
     if 300 <= code < 400:
         return "wrong-base", f"{code} redirect from {url}"
     if code == 404:
-        return "wrong-base", f"404 at {url}"
+        # A 404 on a documented list path is a wrong base; on a bare base it only
+        # means the host answered (the base is a prefix, not a document).
+        if url.rstrip("/").endswith("/models"):
+            return "wrong-base", f"404 at {url}"
+        return "reachable", f"{url} (host answered; no list endpoint)"
     if code >= 500:
         return "incident", f"{code} at {url}"
     return "error", f"{code} at {url}"
@@ -532,14 +536,10 @@ def check(
         }
         for name in sorted(used):
             verdict, detail = probe_provider(name, env, status=status)
-            keyed = _providers.has_key(name, env)
             if verdict in {"unreachable", "wrong-base", "incident", "error"}:
                 problems.append(Problem(f"{name} probe", f"{verdict}: {detail}"))
-            elif verdict == "auth-required" and keyed:
-                problems.append(
-                    Problem(f"{name} probe", "the configured key was rejected (401/403)")
-                )
-            # no key + 401/403 = reachable and auth is expected: not a problem.
+            # 401/403 = reachable and auth is expected; the probe never sends a
+            # key, so it cannot judge one (probe_roles does the authenticated call).
 
     # 4. Browser e2e: a task whose brief names an e2e spec needs a runnable
     #    suite (026 AC-8). Cheap: file existence, no browser launch.
