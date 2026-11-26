@@ -61,6 +61,8 @@ CHECK_KINDS = (
     "console_errors",
     "click",
     "wait_for",
+    "select",
+    "no_match",
 )
 
 _AC_RE = re.compile(r"^\s*[-*]?\s*\*\*(AC-\d+)\s*[—–:-]\s*(.+?)\*\*\s*(.*)$")
@@ -770,8 +772,14 @@ def served_app(
     repo: Path | None = None,
     build: bool = True,
     log: Callable[[str], None] = print,
+    fixtures: bool = True,
 ) -> Iterator[str]:
-    """Serve the local build with the fixture backend; yield the preview URL."""
+    """Serve the local build; yield the preview URL.
+
+    `fixtures=False` is the live lane: `ROUTE_FIXTURES` is not forced, the
+    operator's `MAPBOX_TOKEN` is used, and the real provider (Mapbox + OSM) is
+    called. That is opt-in because it is network- and quota-dependent.
+    """
     root = Path(repo or REPO_ROOT)
     procs: list[subprocess.Popen] = []
     logs: list[Any] = []
@@ -792,12 +800,15 @@ def served_app(
         backend_port = _free_port(8010)
         preview_port = _free_port(4174)
         env = dict(os.environ)
-        env.update(
-            {
-                "ROUTE_FIXTURES": "1",
-                "MAPBOX_TOKEN": env.get("MAPBOX_TOKEN") or "acceptance-fixtures-token",
-            }
-        )
+        if fixtures:
+            env.update(
+                {
+                    "ROUTE_FIXTURES": "1",
+                    "MAPBOX_TOKEN": env.get("MAPBOX_TOKEN") or "acceptance-fixtures-token",
+                }
+            )
+        else:
+            env.pop("ROUTE_FIXTURES", None)
         log_path = _contract.current(root).runs_path() / "acceptance-server.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         handle = log_path.open("w")

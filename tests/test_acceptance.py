@@ -567,3 +567,19 @@ kind = "route_request"
 selector = "#dest"
 """)
     assert load_checks(spec)[0].origin == ""
+
+
+def test_served_app_fixtures_flag_is_documented():
+    import inspect
+
+    from swarm.drivers.acceptance import served_app
+
+    signature = inspect.signature(served_app)
+    assert signature.parameters["fixtures"].default is True
+
+
+def test_select_and_no_match_are_known_check_kinds():
+    from swarm.drivers.acceptance import CHECK_KINDS
+
+    assert "select" in CHECK_KINDS
+    assert "no_match" in CHECK_KINDS
