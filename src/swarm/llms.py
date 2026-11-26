@@ -413,6 +413,88 @@ def _build(
             timeout=timeout or _timeout_seconds(),
             max_retries=sdk_retries,
         )
+    # 055 T2: dispatch by the provider registry. Native providers let LiteLLM
+    # read their own env vars; gateways/local/compatible get an explicit base.
+    from swarm import providers as _providers
+
+    provider = _providers.resolve(model)
+    if provider is None:
+        strict = os.getenv("SWARM_STRICT_PREFIXES", "1") != "0"
+        if strict:
+            raise SystemExit(
+                f"unknown provider prefix in {model!r}. Use one of: "
+                + ", ".join(_providers.known_prefixes())
+                + ". Every provider is one `.env` key — see docs/providers.md "
+                "(SWARM_STRICT_PREFIXES=0 restores the old OpenRouter fallback)."
+            )
+        print(
+            f"provider: {model} has no known prefix → OpenRouter "
+            "(SWARM_STRICT_PREFIXES=0)",
+            flush=True,
+        )
+    elif provider.kind == "subscription":
+        raise SystemExit(
+            f"{model} is a subscription model ({provider.name}): sign in through a "
+            "local LiteLLM proxy and point SWARM_*_MODEL at the proxy alias — see "
+            f"{provider.docs or 'docs/providers.md'} (subscriptions)."
+        )
+    elif provider.kind == "openai_compatible":
+        base = (os.getenv(provider.base_env, "") or provider.default_base).rstrip("/")
+        if not base:
+            raise SystemExit(
+                f"{model} needs {provider.base_env} (an OpenAI-compatible endpoint) — "
+                "see docs/providers.md."
+            )
+        key = os.environ.get(provider.keys[0], "") if provider.keys else "local"
+        _record_cache_mode(model, support)
+        return LLM(
+            model=model.split("/", 1)[1],
+            custom_openai=True,
+            base_url=base,
+            api_key=key or "local",
+            temperature=temperature,
+            timeout=timeout or _timeout_seconds(),
+            max_retries=sdk_retries,
+        )
+    elif provider.kind == "local":
+        base = (
+            os.getenv(provider.base_env, "") if provider.base_env else ""
+        ) or provider.default_base
+        _record_cache_mode(model, support)
+        return LLM(
+            model=model,
+            api_base=base,
+            temperature=temperature,
+            timeout=timeout or _timeout_seconds(),
+            max_retries=sdk_retries,
+            is_litellm=True,
+        )
+    elif provider.kind == "gateway" and provider.name != "openrouter":
+        base = (
+            os.getenv(provider.base_env, "") if provider.base_env else ""
+        ) or provider.default_base
+        key = os.environ.get(provider.keys[0], "") if provider.keys else ""
+        _record_cache_mode(model, support)
+        return LLM(
+            model=model.split("/", 1)[1],
+            custom_openai=True,
+            base_url=base,
+            api_key=key,
+            temperature=temperature,
+            timeout=timeout or _timeout_seconds(),
+            max_retries=sdk_retries,
+        )
+    else:
+        # Native: LiteLLM routes `prefix/model` and reads the provider's own env
+        # (OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, AZURE_API_KEY, ...).
+        _record_cache_mode(model, support)
+        return LLM(
+            model=model,
+            temperature=temperature,
+            timeout=timeout or _timeout_seconds(),
+            max_retries=sdk_retries,
+        )
+
     if support == "hint":
         try:
             llm = LLM(
@@ -440,7 +522,6 @@ def _build(
         timeout=timeout or _timeout_seconds(),
         max_retries=sdk_retries,
     )
-
 
 def _for_role(
     env_var: str, *, temperature: float, allow_paid: bool, timeout: int | None = None

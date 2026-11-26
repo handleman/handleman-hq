@@ -42,6 +42,10 @@ contract; the core has no `app/` or `frontend/` strings.
 
 ## Model tiers (`src/swarm/model_config.py` resolves; `llms.py` builds)
 
+> Every supported provider (prefix, key env, base, recipes) is in
+> [`providers.md`](providers.md). An unknown prefix is an error by design;
+> `preflight --probe` checks reachability without a key.
+
 Current operator profile (**OpenCode Go**, 2026-11-25): every role is a Go model
 with tool calling and every fallback is a second Go model, so a provider blip
 moves sideways and nothing dials Ollama. Chosen for **cost per green task, not

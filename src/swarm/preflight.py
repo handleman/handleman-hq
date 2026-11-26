@@ -102,6 +102,46 @@ def _get_json(url: str, *, headers: dict[str, str] | None = None, timeout: float
         return json.loads(resp.read())
 
 
+def _http_status(url: str, *, timeout: float = 6.0) -> tuple[int | None, str]:
+    """(status, error) for a key-free reachability probe (055 AC-4)."""
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return int(getattr(resp, "status", 200)), ""
+    except urllib.error.HTTPError as e:
+        return int(e.code), ""
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        return None, str(e)
+
+
+def probe_provider(
+    name: str,
+    env: dict[str, str] | None = None,
+    *,
+    status: Callable[[str], tuple[int | None, str]] = _http_status,
+) -> tuple[str, str]:
+    """Classify a provider without a key: reachable/auth-required/wrong-base/unreachable/incident."""
+    from swarm import providers as _providers
+
+    url = _providers.probe_url(name, env)
+    if not url:
+        return "none", "no probe URL"
+    code, error = status(url)
+    if code is None:
+        return "unreachable", error or "no response"
+    if 200 <= code < 300:
+        return "reachable", url
+    if code in (401, 403):
+        return "auth-required", url
+    if 300 <= code < 400:
+        return "wrong-base", f"{code} redirect from {url}"
+    if code == 404:
+        return "wrong-base", f"404 at {url}"
+    if code >= 500:
+        return "incident", f"{code} at {url}"
+    return "error", f"{code} at {url}"
+
+
 def _ping_model_ids(env: dict[str, str], fetch: Callable[..., Any]) -> dict[str, set[str]]:
     """Available model ids per cloud provider (one request each)."""
     avail: dict[str, set[str]] = {}
@@ -305,6 +345,8 @@ def check(
     which: Callable[[str], str | None] = shutil.which,
     offline: bool = False,
     probe_factories: bool = False,
+    probe: bool = False,
+    status: Callable[[str], tuple[int | None, str]] = _http_status,
 ) -> list[Problem]:
     """Return every blocking problem; empty list means safe to start.
 
@@ -356,6 +398,47 @@ def check(
             problems.append(
                 Problem(var, "uses OpenCode Go but OPENCODE_GO_API_KEY is empty")
             )
+
+    # 1c. Provider registry (055 T3): the id must name a known prefix and carry
+    # the credential that prefix needs; subscriptions point at the proxy route.
+    from swarm import providers as _providers
+
+    for var in ROLE_VARS + OPTIONAL_ROLE_VARS:
+        model = env.get(var, "").strip()
+        if not model:
+            continue
+        resolved = _providers.resolve(model)
+        if resolved is None:
+            if os.getenv("SWARM_STRICT_PREFIXES", "1") != "0":
+                problems.append(
+                    Problem(
+                        var,
+                        f"{model} has no known provider prefix — use one of "
+                        + ", ".join(_providers.known_prefixes())
+                        + " (docs/providers.md)",
+                    )
+                )
+            continue
+        if resolved.kind == "subscription":
+            problems.append(
+                Problem(
+                    var,
+                    f"{resolved.name} is a subscription model: sign in through a local "
+                    "LiteLLM proxy (docs/providers.md#subscriptions)",
+                )
+            )
+            continue
+        if resolved.kind in {"native", "gateway", "openai_compatible"} and not (
+            _providers.has_key(resolved.name, env)
+        ):
+            hint = resolved.keys[0] if resolved.keys else "a credential"
+            problems.append(
+                Problem(var, f"set {hint} for {resolved.name} (docs/providers.md#{resolved.name})")
+            )
+        if resolved.base_env:
+            base = str(env.get(resolved.base_env, "")).strip()
+            if base and not base.startswith(("http://", "https://")):
+                problems.append(Problem(var, f"{resolved.base_env} must be an http(s) URL"))
 
     # 1b. Fallback ids are real model ids too (047 AC-6). The 2026-11-22 bug was
     # a Go id sitting in SWARM_LOCAL_FALLBACK_MODEL as if it were OpenRouter:
@@ -433,6 +516,30 @@ def check(
     for binary in _gate_binaries(env):
         if not which(binary, path=path_env):
             problems.append(Problem("gates", f"`{binary}` not found in the project venvs"))
+
+    # 4b. Key-free reachability probe (055 AC-4): before a paid run, prove the
+    # provider is reachable and the base URL is right — no registration needed.
+    if probe:
+        from swarm import providers as _providers
+
+        used = {
+            p.name
+            for p in (
+                _providers.resolve(env.get(v, "").strip())
+                for v in ROLE_VARS + OPTIONAL_ROLE_VARS
+            )
+            if p is not None
+        }
+        for name in sorted(used):
+            verdict, detail = probe_provider(name, env, status=status)
+            keyed = _providers.has_key(name, env)
+            if verdict in {"unreachable", "wrong-base", "incident", "error"}:
+                problems.append(Problem(f"{name} probe", f"{verdict}: {detail}"))
+            elif verdict == "auth-required" and keyed:
+                problems.append(
+                    Problem(f"{name} probe", "the configured key was rejected (401/403)")
+                )
+            # no key + 401/403 = reachable and auth is expected: not a problem.
 
     # 4. Browser e2e: a task whose brief names an e2e spec needs a runnable
     #    suite (026 AC-8). Cheap: file existence, no browser launch.
@@ -512,6 +619,24 @@ def frontend_lock_problem(repo_root: Path | None = None) -> list[Problem]:
     ]
 
 
+def price_warnings(env: dict[str, str] | None = None) -> list[str]:
+    """Paid role models with no price row (055 AC-6): cost is None, cap inert."""
+    from swarm.usage import _rate
+
+    source = os.environ if env is None else env
+    out: list[str] = []
+    for var in ROLE_VARS + OPTIONAL_ROLE_VARS:
+        model = str(source.get(var, "")).strip()
+        if not model or is_free_model(model):
+            continue
+        if _rate(model) is None:
+            out.append(
+                f"{var} {model} has no price row — cost is None and "
+                "SWARM_MAX_COST_PER_TASK cannot fire (add it to usage.py)"
+            )
+    return out
+
+
 def database_note() -> str:
     """One informational line about the local Postgres (never a failure).
 
@@ -538,6 +663,12 @@ def main() -> int:
 
     ap = argparse.ArgumentParser(description="Validate swarm model/venv configuration.")
     ap.add_argument("--offline", action="store_true", help="skip provider model-list requests")
+    ap.add_argument(
+        "--probe",
+        action="store_true",
+        default=os.getenv("SWARM_PREFLIGHT_PROBE", "0") == "1",
+        help="key-free reachability probe per used provider (no registration needed)",
+    )
     args = ap.parse_args()
 
     for var in ROLE_VARS + OPTIONAL_ROLE_VARS:
@@ -555,8 +686,10 @@ def main() -> int:
     for note in spec_kind_notes():
         print(f"spec-kind: {note}")
     problems += probe_roles(offline=args.offline)
-    problems += check(offline=args.offline)
+    problems += check(offline=args.offline, probe=args.probe)
     problems += frontend_lock_problem()
+    for warning in price_warnings():
+        print(f"price: {warning}")
     for p in problems:
         print(f"FAIL {p}")
     if problems:

@@ -12,8 +12,10 @@ def test_provider_routes_every_prefix_and_unknown():
     assert model_config.provider("openrouter/nvidia/x:free") == "openrouter"
     assert model_config.provider("") == "unknown"
     assert model_config.provider("?") == "unknown"
-    # A bare id routes to OpenRouter (the default gateway).
-    assert model_config.provider("anthropic/claude") == "openrouter"
+    # 055: an explicit provider prefix routes to that provider.
+    assert model_config.provider("anthropic/claude-sonnet-5") == "anthropic"
+    # A bare id still routes to OpenRouter (back-compat until T2's strictness).
+    assert model_config.provider("gpt-5") == "openrouter"
 
 
 def test_is_free_covers_local_and_free_tiers_only():

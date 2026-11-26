@@ -19,6 +19,9 @@ it consumes this package — it does not vendor it.
   by recorded failures, not taste.
 - **Deterministic before paid.** Delta/scope/allowlist guards, e2e triage and the
   acceptance oracle self-test are code with tests; add a test with every guard.
+- **Providers are data.** Add one row to `src/swarm/providers.py` and a recipe
+  in `docs/providers.md`; never special-case a provider in the flow. An unknown
+  prefix is an error (`SWARM_STRICT_PREFIXES=0` is the legacy escape hatch).
 - **Spec before code.** Non-trivial changes go through
   `specs/harness/<NNN>-<name>/` (`spec.md` → `plan.md` → `tasks.md`). Small,
   isolated fixes may skip the spec.

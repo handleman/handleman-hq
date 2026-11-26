@@ -34,6 +34,7 @@ def test_a_rejected_hint_falls_back_to_the_plain_llm(monkeypatch):
     # Hermetic: the paid guard reads the env, so opt in here instead of relying
     # on the checkout's .env (which is free-only by default).
     monkeypatch.setenv("SWARM_ALLOW_PAID", "1")
+    monkeypatch.setenv("SWARM_STRICT_PREFIXES", "0")  # bare id → OpenRouter fallback
     calls: list[dict] = []
     real = llms.LLM
 
@@ -45,24 +46,25 @@ def test_a_rejected_hint_falls_back_to_the_plain_llm(monkeypatch):
 
     monkeypatch.setattr(llms, "LLM", fake_llm)
     try:
-        llms._build("anthropic/claude-opus-5", temperature=0, allow_paid=True)
+        llms._build("claude-opus-5", temperature=0, allow_paid=True)
     finally:
         monkeypatch.setattr(llms, "LLM", real)
     assert len(calls) == 2
     assert "extra_body" in calls[0] and "extra_body" not in calls[1]
-    assert llms.cache_modes()["anthropic/claude-opus-5"] == "plain"
+    assert llms.cache_modes()["claude-opus-5"] == "plain"
 
 
 def test_an_accepted_hint_is_recorded(monkeypatch):
     monkeypatch.delenv("SWARM_PROMPT_CACHE", raising=False)
     monkeypatch.setenv("SWARM_ALLOW_PAID", "1")
+    monkeypatch.setenv("SWARM_STRICT_PREFIXES", "0")  # bare id → OpenRouter fallback
     real = llms.LLM
     monkeypatch.setattr(llms, "LLM", lambda **kwargs: object())
     try:
-        llms._build("anthropic/claude-opus-5", temperature=0, allow_paid=True)
+        llms._build("claude-opus-5", temperature=0, allow_paid=True)
     finally:
         monkeypatch.setattr(llms, "LLM", real)
-    assert llms.cache_modes()["anthropic/claude-opus-5"] == "hint"
+    assert llms.cache_modes()["claude-opus-5"] == "hint"
 
 
 def test_run_json_records_the_cache_decision():

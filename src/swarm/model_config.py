@@ -17,23 +17,23 @@ import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
-# Prefix → provider. Anything else routes to OpenRouter.
-PROVIDER_PREFIXES: tuple[tuple[str, str], ...] = (
-    ("ollama/", "ollama"),
-    ("zen/", "zen"),
-    ("opencode-go/", "opencode-go"),
-    ("openrouter/", "openrouter"),
-)
+# 055 AC-1: the registry is the source of truth; this alias keeps the old import
+# shape for consumers and tests.
+from swarm import providers as _providers
+
+PROVIDER_PREFIXES: tuple[tuple[str, str], ...] = _providers.prefixes()
 
 
 def provider(model: str) -> str:
-    """Provider a model id routes to (''/'?' → unknown)."""
+    """Provider a model id routes to (''/'?' → unknown).
+
+    Bare ids keep today's back-compat route to OpenRouter; 055 T2 turns an
+    unknown prefix into a preflight error when no OpenRouter key is configured.
+    """
     if not model or model == "?":
         return "unknown"
-    for prefix, name in PROVIDER_PREFIXES:
-        if model.startswith(prefix):
-            return name
-    return "openrouter"
+    resolved = _providers.resolve(model)
+    return resolved.name if resolved is not None else "openrouter"
 
 
 def is_free(model: str) -> bool:

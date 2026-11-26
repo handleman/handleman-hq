@@ -336,3 +336,99 @@ def test_opencode_go_is_its_own_provider(monkeypatch):
     env.pop("OPENCODE_API_KEY", None)
     problems = check(env, offline=True, which=_which)
     assert any("OPENCODE_GO_API_KEY" in p.detail for p in problems)
+
+# ---- 055 T3/T4: registry validation + key-free probe ---------------------
+
+PAID = {
+    "SWARM_PLANNER_MODEL": "anthropic/claude-sonnet-5",
+    "SWARM_CODER_MODEL": "anthropic/claude-sonnet-5",
+    "SWARM_REVIEWER_MODEL": "anthropic/claude-sonnet-5",
+    "SWARM_SENIOR_MODEL": "anthropic/claude-sonnet-5",
+    "SWARM_ALLOW_PAID": "1",
+    "ANTHROPIC_API_KEY": "sk-ant-test",
+}
+
+
+def _problems(env, **kw):
+    return [str(p) for p in check(env=env, offline=True, which=_which, **kw)]
+
+
+def test_an_unknown_prefix_is_named_with_the_valid_prefixes():
+    env = _ok_env(SWARM_CODER_MODEL="mystery/model")
+    problems = _problems(env)
+    assert any("no known provider prefix" in p and "anthropic/" in p for p in problems)
+
+
+def test_a_missing_provider_key_is_named():
+    env = dict(PAID)
+    env.pop("ANTHROPIC_API_KEY")
+    assert any("set ANTHROPIC_API_KEY" in p for p in _problems(env))
+
+
+def test_a_subscription_model_points_at_the_proxy():
+    env = dict(PAID)
+    env["SWARM_CODER_MODEL"] = "github_copilot/claude-sonnet-5"
+    assert any("subscription" in p and "proxy" in p for p in _problems(env))
+
+
+def test_a_base_url_must_be_http_or_https():
+    env = dict(PAID, ANTHROPIC_API_BASE="ftp://llm.internal")
+    assert any("must be an http(s) URL" in p for p in _problems(env))
+
+
+def test_probe_classification_without_a_key():
+    cases = {
+        200: "reachable",
+        401: "auth-required",
+        403: "auth-required",
+        404: "wrong-base",
+        308: "wrong-base",
+        503: "incident",
+    }
+    for code, expected in cases.items():
+        verdict, _ = preflight.probe_provider(
+            "anthropic", {}, status=lambda url, code=code: (code, "")
+        )
+        assert verdict == expected, code
+
+
+def test_probe_reports_an_unreachable_provider():
+    verdict, detail = preflight.probe_provider(
+        "anthropic", {}, status=lambda url: (None, "timed out")
+    )
+    assert verdict == "unreachable" and "timed out" in detail
+
+
+def test_probe_problems_only_on_real_faults():
+    env = dict(LOCAL_ENV)  # ollama, no key
+    # reachable local provider: no problem
+    problems = [
+        str(p)
+        for p in check(
+            env=env, offline=False, which=_which, probe=True,
+            status=lambda url: (200, ""),
+            fetch=_tags("swarm-coder:latest", "swarm-qa:latest"),
+        )
+    ]
+    assert not any("probe" in p for p in problems)
+    # unreachable: a problem naming the verdict
+    problems = [
+        str(p)
+        for p in check(
+            env=env, offline=True, which=_which, probe=True,
+            status=lambda url: (None, "DNS failure"),
+        )
+    ]
+    assert any("unreachable" in p and "DNS failure" in p for p in problems)
+
+
+def test_a_key_that_the_provider_rejects_is_a_problem():
+    env = dict(PAID)
+    problems = [
+        str(p)
+        for p in check(
+            env=env, offline=True, which=_which, probe=True,
+            status=lambda url: (401, ""),
+        )
+    ]
+    assert any("configured key was rejected" in p for p in problems)
