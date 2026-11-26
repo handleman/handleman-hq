@@ -117,10 +117,11 @@ class SpecReport:
     not_applicable: dict[str, str] = field(default_factory=dict)
     config_errors: list[str] = field(default_factory=list)
     oracle: list[dict[str, str]] = field(default_factory=list)
+    design_issues: list[dict[str, str]] = field(default_factory=list)
 
     @property
     def verdict(self) -> str:
-        if self.global_failures or self.layout_failures:
+        if self.global_failures or self.layout_failures or self.design_issues:
             return "FAIL"
         if self.oracle_failures:
             return "FAIL"
@@ -461,6 +462,13 @@ def render_report(report: SpecReport, *, generated: str | None = None) -> str:
             f"| {ac} | {entry.get('verdict', 'unverified').upper()} | "
             f"{entry.get('source', 'none')} | {_cell(entry.get('evidence', ''))} |"
         )
+    if report.design_issues:
+        lines += ["", "## Design checks", "", "| Check | Target | Detail | AC |", "| --- | --- | --- | --- |"]
+        for issue in report.design_issues:
+            lines.append(
+                f"| {issue.get('check', '')} | {_cell(issue.get('target', ''))} | "
+                f"{_cell(issue.get('detail', ''))} | {issue.get('ac', '')} |"
+            )
     if report.oracle:
         lines += ["", "## Oracle self-test", "", "| AC | Kind | Verdict | Detail |", "| --- | --- | --- | --- |"]
         for entry in report.oracle:
@@ -697,6 +705,27 @@ def browser_plan(
                     "controls": {k: c.selector for k, c in contract.controls.items()},
                 }
             )
+    design_specs: list[dict[str, Any]] = []
+    for spec in specs:
+        from swarm.design import checks as _design_checks
+
+        try:
+            table = _design_checks.load_checks(spec)
+        except _design_checks.DesignCheckError:
+            table = None
+        if not table:
+            continue
+        design_specs.append(
+            {
+                "spec": spec.name,
+                "tokens": [str(entry.get("name", "")) for entry in (table.get("token") or [])],
+                "regions": [
+                    {"id": str(entry.get("id", "")), "selector": str(entry.get("selector", ""))}
+                    for entry in (table.get("region") or [])
+                ],
+                "frame": str((table.get("screenshot") or {}).get("frame", "desktop")),
+            }
+        )
     return {
         "baseUrl": base_url,
         "outDir": str(out_dir),
@@ -705,6 +734,7 @@ def browser_plan(
             for name, width, height in VIEWS
         ],
         "checks": checks,
+        "design": design_specs,
         "selftest": bool(selftest),
         "layout": layout_specs,
     }
@@ -999,6 +1029,8 @@ def run(
         plan = browser_plan(chosen, base_url=url, out_dir=out_dir, selftest=selftest)
         browser = dict(runner(plan))
 
+    from swarm.design import checks as _design_checks
+
     for spec_dir in chosen:
         report = evaluate_spec(
             spec_dir,
@@ -1063,6 +1095,27 @@ def run(
                 tasks_path.write_text(new_text)
                 artifacts.append(tasks_path)
                 report.queued = [line.split(" ", 2)[2][:120] for line in added]
+        try:
+            table = _design_checks.load_checks(spec_dir)
+        except _design_checks.DesignCheckError as exc:
+            report.config_errors.append(f"design: {exc}")
+            table = None
+        if table:
+            frame = str((table.get("screenshot") or {}).get("frame", "desktop"))
+            facts = ((browser.get("design") or {}).get(spec_dir.name) or {}).get(frame) or {}
+            if facts:
+                report.design_issues = _design_checks.evaluate(
+                    table, facts, root=root
+                )
+            else:
+                report.design_issues = [
+                    {
+                        "check": "design_facts",
+                        "target": spec_dir.name,
+                        "detail": "no design facts recorded",
+                        "ac": "AC-D",
+                    }
+                ]
         reports.append(report)
         counts = report.counts
         log(

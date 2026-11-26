@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "handleman-hq"
-version = "0.5.1"
+version = "0.6.0"
 description = "The dark factory: a spec-driven, model-agnostic agent swarm for any repo"
 readme = "README.md"
 license = { text = "MIT" }
@@ -12,6 +12,8 @@ requires-python = ">=3.12,<3.14"
 dependencies = [
     "crewai[litellm]",
     "crewai-tools",
+    "mcp>=1.30",
+    "pillow>=11",
     "textual",
     "python-dotenv",
     "rich",

@@ -49,3 +49,16 @@ db:
   script: swarm/db.sh
 python:
   venv: .venv
+
+# Optional: Figma design lane (057). MCP with first-run OAuth, or REST with a
+# personal access token; both write designs/ (committed, read-only to the coder).
+# design:
+#   provider: figma
+#   transport: auto               # auto | mcp | rest
+#   file_key: "<key from /design/<key>/...>"
+#   nodes: ["12:34"]              # allowlisted frames
+#   token_env: FIGMA_TOKEN        # REST only
+#   dir: designs
+#   auth:
+#     timeout_s: 600
+#     open_browser: true

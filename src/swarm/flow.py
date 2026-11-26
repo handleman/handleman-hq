@@ -155,6 +155,8 @@ class SwarmState(BaseModel):
     drivers: dict[str, str] = field(default_factory=dict)
     # 042: the per-task visual verdict (advisory, never the gate).
     visual: dict[str, Any] = field(default_factory=dict)
+    # 057: the design lane record (file/nodes/transport/sync status).
+    design: dict[str, Any] = field(default_factory=dict)
 
 
 class _QuotaExhausted(SystemExit):
@@ -3223,6 +3225,48 @@ class SwarmFlow(Flow[SwarmState]):
                 self.save_run("preflight_failed")
                 return self.state.result
 
+        # 057: the design cache is a run prerequisite. Preflight syncs it, but
+        # a run with SWARM_SKIP_PREFLIGHT=1 still needs the reference; this also
+        # gives the first-run OAuth flow a terminal to print the URL into.
+        if os.getenv("SWARM_SKIP_DESIGN", "0") != "1":
+            from swarm import contract as _contract
+
+            raw_design = _contract.current(REPO_ROOT).design
+            if raw_design:
+                from swarm.design import sync as _design_sync
+                from swarm.design.oauth import FigmaAuthRequired
+
+                try:
+                    design_config = _design_sync.resolve(REPO_ROOT, mapping=raw_design)
+                    if design_config is not None:
+                        self.state.design = {
+                            "file_key": design_config.file_key,
+                            "nodes": list(design_config.nodes),
+                            "transport": design_config.transport,
+                        }
+                        synced = _design_sync.ensure(
+                            REPO_ROOT,
+                            design_config,
+                            on_url=lambda url: print(f"figma: authorize at {url}", flush=True),
+                            non_interactive=os.getenv("SWARM_NONINTERACTIVE", "")
+                            in {"1", "true", "yes"},
+                        )
+                        self.state.design["synced"] = bool(synced.get("synced"))
+                    else:
+                        self.state.design = {"status": "not_configured"}
+                except FigmaAuthRequired as exc:
+                    self.state.design = {"status": "auth_required", "url": exc.url}
+                    self.state.result = f"figma_auth_required: {exc.url}"[:4000]
+                    self.state.error = "figma_auth_required"
+                    self.save_run("needs_human")
+                    return self.state.result
+                except Exception as exc:
+                    self.state.design = {"status": "error", "detail": str(exc)[:400]}
+                    self.state.result = f"design failed: {exc}"[:4000]
+                    self.state.error = str(exc)[:2000]
+                    self.save_run("needs_human")
+                    return self.state.result
+
         # 016 follow-up: a stash left by an earlier run is preserved as a ref and
         # removed from the stack, so it can never be restored onto a wrong base.
         if os.getenv("SWARM_ARCHIVE_STASHES", "1") == "1":
@@ -4453,6 +4497,7 @@ class SwarmFlow(Flow[SwarmState]):
             "host_suspended": suspended,
             "drivers": self.state.drivers,
             "visual": self.state.visual,
+            "design": self.state.design,
             "done": {"task_hash": task_hash_value, "spec_hash": spec_hash_value, "recorded": False},
             "resumed_from_step": self.state.resumed_from_step,
             "recovery": self.state.recovery,

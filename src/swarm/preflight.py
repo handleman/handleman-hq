@@ -548,6 +548,55 @@ def check(
 
         for problem in e2e_suite.available(REPO_ROOT):
             problems.append(Problem("e2e", problem))
+
+    # 5. Design lane (057): a configured Figma file must have a cache. The
+    #    first sync may run the MCP OAuth flow here (URL printed, loopback
+    #    callback) so the run continues; non-interactive runs report the URL.
+    if os.getenv("SWARM_SKIP_DESIGN", "0") != "1":
+        from swarm import contract as _contract
+        from swarm.design import sync as _design
+
+        raw = _contract.current(REPO_ROOT).design
+        if raw:
+            try:
+                config = _design.resolve(REPO_ROOT, mapping=raw)
+                if config is not None:
+                    state = _design.check(REPO_ROOT, config)
+                    if not state.get("ok"):
+                        non_interactive = env.get("SWARM_NONINTERACTIVE", "").strip() in {
+                            "1",
+                            "true",
+                            "yes",
+                        }
+                        try:
+                            _design.sync(
+                                REPO_ROOT,
+                                config,
+                                non_interactive=non_interactive,
+                                on_url=lambda url: print(
+                                    f"figma: authorize at {url}", flush=True
+                                ),
+                            )
+                        except Exception as exc:  # noqa: BLE001 - reported, not raised
+                            url = getattr(exc, "url", "")
+                            problems.append(
+                                Problem(
+                                    "design",
+                                    f"{type(exc).__name__}: {exc}"
+                                    + (f" — {url}" if url else ""),
+                                )
+                            )
+                        else:
+                            state = _design.check(REPO_ROOT, config)
+                            if not state.get("ok"):
+                                problems.append(
+                                    Problem(
+                                        "design",
+                                        f"{state.get('code')}: {state.get('detail')} — run `hq design sync`",
+                                    )
+                                )
+            except Exception as exc:  # noqa: BLE001 - config errors are problems
+                problems.append(Problem("design", str(exc)))
     return problems
 
 

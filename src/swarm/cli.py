@@ -78,6 +78,8 @@ def main(argv: list[str] | None = None) -> int:
         ("preflight", "validate models/keys/venvs"),
         ("report", "the ledger dashboard"),
         ("bench", "the replay benchmark"),
+        ("figma", "Figma authorization and token status (057)"),
+        ("design", "design cache, checks and brief (057)"),
     ):
         child = sub.add_parser(name, help=text)
         child.add_argument("rest", nargs=argparse.REMAINDER)
@@ -106,6 +108,8 @@ def main(argv: list[str] | None = None) -> int:
         return _forward("swarm.report", args.rest, target=target)
     if args.command == "bench":
         return _forward("swarm.drivers.bench", args.rest, target=target)
+    if args.command in {"figma", "design"}:
+        return _forward("swarm.design.cli", [args.command, *args.rest], target=target)
     script = target / "swarm" / f"{args.command}.sh"
     if not script.is_file():
         print(

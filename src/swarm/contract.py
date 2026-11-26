@@ -114,6 +114,9 @@ class Contract:
     lock_dir: str = DEFAULT_LOCK_DIR
     runs_dir: str = DEFAULT_RUNS_DIR
     drivers: dict[str, str] = field(default_factory=dict)
+    # 057: the optional design lane (`design:` block); raw mapping, validated by
+    # swarm.design.config when used.
+    design: dict[str, Any] = field(default_factory=dict)
     gate_map: tuple[tuple[str, tuple[str, ...]], ...] = DEFAULT_GATE_MAP
     risk_classes: dict[int, tuple[str, ...]] = field(
         default_factory=lambda: dict(DEFAULT_RISK_CLASSES)
@@ -235,10 +238,26 @@ def load(root: Path | None = None, *, text: str | None = None) -> Contract:
         lock_dir=_as_str(raw.get("lock_dir"), "lock_dir"),
         runs_dir=_as_str(raw.get("runs_dir"), "runs_dir") or DEFAULT_RUNS_DIR,
         drivers=_drivers(raw.get("drivers")),
+        design=_design(raw.get("design")),
         gate_map=_gate_map(raw.get("gate_map")) or DEFAULT_GATE_MAP,
         source=source,
         extra=extra,
     )
+
+
+def _design(raw: Any) -> dict[str, Any]:
+    """`design:` block (057): validated shape, raw mapping kept for consumers."""
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise ContractError("design must be a mapping")
+    from swarm.design.config import DesignConfig, DesignConfigError
+
+    try:
+        DesignConfig.from_mapping(raw)
+    except DesignConfigError as exc:
+        raise ContractError(f"design: {exc}") from exc
+    return dict(raw)
 
 
 def _drivers(raw: Any) -> dict[str, str]:
@@ -334,6 +353,13 @@ def main() -> int:
     print(f"e2e        {contract.e2e_prefix()}")
     print(f"runs       {contract.runs_dir}")
     print(f"drivers    {contract.drivers or 'packaged'}")
+    if contract.design:
+        print(
+            "design     "
+            f"{contract.design.get('transport', 'auto')} · "
+            f"{contract.design.get('file_key', '<no file>')} · "
+            f"{len(contract.design.get('nodes') or [])} node(s)"
+        )
     return 0
 
 

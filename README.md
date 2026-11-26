@@ -54,6 +54,14 @@ docs/               one file per topic
 swarm.yaml.example  the contract, every key documented
 ```
 
+## Design from Figma
+
+The queue implements Figma frames through the remote MCP server — first-run
+OAuth prints a URL, waits for the browser callback, stores the token and
+continues the same run — or through the REST API with a personal access token.
+Both write a committed design cache that the run reads offline. See
+[`docs/design.md`](docs/design.md).
+
 ## Documentation
 
 - [`docs/how-it-works.md`](docs/how-it-works.md) — roles, phase order, the flow diagram, the invariant.

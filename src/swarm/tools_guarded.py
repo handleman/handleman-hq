@@ -114,6 +114,10 @@ def in_scope(path: str, scope: tuple[str, ...] | None = None) -> bool:
     norm = _safe_rel(path)
     if norm is None:
         return False
+    # 057: the design cache is immutable during a run; only `hq design sync`
+    # writes it (so a coder cannot hand-edit the reference it is checked against).
+    if norm == "designs" or norm.startswith("designs/"):
+        return False
     for entry in scope or resolve_scope():
         e = entry.replace("\\", "/")
         if e.endswith("/"):

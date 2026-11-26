@@ -555,12 +555,21 @@ def stable_prefix(task: SpecTask, spec_dir: str = "", kind: str = "step") -> str
         from swarm.verify import task_line
 
         scope_line = task_line(spec_dir, task.id)
-    return "\n".join(
-        [
-            role_rules(kind),
-            task_block(task, spec_dir, ac=ac, plan=scenario, scope_line=scope_line),
-        ]
-    )
+    design_block = ""
+    if spec_dir:
+        try:
+            from swarm.design.sync import brief_for_spec
+
+            design_block = brief_for_spec(REPO_ROOT, spec_dir)
+        except Exception:  # noqa: BLE001 - a missing design never breaks a prompt
+            design_block = ""
+    parts = [
+        role_rules(kind),
+        task_block(task, spec_dir, ac=ac, plan=scenario, scope_line=scope_line),
+    ]
+    if design_block:
+        parts.append(design_block)
+    return "\n".join(parts)
 
 
 def prompt_prefix(task: SpecTask, spec_dir: str = "", kind: str = "step") -> tuple[str, str]:
