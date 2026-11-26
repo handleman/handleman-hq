@@ -101,6 +101,10 @@ def test_key_envs_and_presence():
 def test_probe_url_uses_public_catalogues_and_local_lists():
     assert providers.probe_url("openrouter", {}) == "https://openrouter.ai/api/v1/models"
     assert providers.probe_url("opencode-go", {}) == "https://opencode.ai/zen/go/v1/models"
+    assert (
+        providers.probe_url("gemini", {})
+        == "https://generativelanguage.googleapis.com/v1beta/models"
+    )
     assert providers.probe_url("sambanova", {}) == "https://api.sambanova.ai/v1/models"
     assert providers.probe_url("ollama", {}) == "http://localhost:11434/api/tags"
     assert providers.probe_url("vllm", {}) == "http://localhost:8000/v1/models"

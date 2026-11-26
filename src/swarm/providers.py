@@ -39,6 +39,7 @@ class Provider:
     base_env: str = ""
     default_base: str = ""
     catalogue: str = "none"
+    probe_suffix: str = "/models"
     tools: bool = True
     docs: str = ""
     note: str = ""
@@ -56,6 +57,7 @@ def _p(
     base_env: str = "",
     default_base: str = "",
     catalogue: str = "keyed",
+    probe_suffix: str = "/models",
     tools: bool = True,
     docs: str = "",
     note: str = "",
@@ -70,6 +72,7 @@ def _p(
         base_env=base_env,
         default_base=default_base,
         catalogue=catalogue,
+        probe_suffix=probe_suffix,
         tools=tools,
         docs=docs or f"{LITELLM_DOCS}{name}",
         note=note,
@@ -85,7 +88,8 @@ PROVIDERS: tuple[Provider, ...] = (
        default_base="https://api.anthropic.com",
        note="Claude API; Azure Foundry uses azure_ai/claude-*"),
     _p("gemini", "gemini/", "GEMINI_API_KEY", base_env="GEMINI_API_BASE",
-       default_base="https://generativelanguage.googleapis.com/v1beta/openai",
+       default_base="https://generativelanguage.googleapis.com",
+       probe_suffix="/v1beta/models",
        extra_keys=("GOOGLE_API_KEY",), note="Google AI Studio, free tier with a key"),
     _p("vertex_ai", "vertex_ai/", "", kind="native", catalogue="none",
        note="service-account/ADC: VERTEXAI_PROJECT + VERTEXAI_LOCATION"),
@@ -255,7 +259,7 @@ def probe_url(name: str, env: dict[str, str] | None = None) -> str:
         return f"{base}/api/tags" if provider.name == "ollama" else f"{base}/models"
     if provider.catalogue in {"public", "keyed"}:
         # A list endpoint answers 401/403 without a key — the signal we want.
-        return f"{base}/models"
+        return f"{base}{provider.probe_suffix}"
     return base or ""
 
 
