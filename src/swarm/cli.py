@@ -81,7 +81,7 @@ def main(argv: list[str] | None = None) -> int:
         ("figma", "Figma authorization and token status (057)"),
         ("design", "design cache, checks and brief (057)"),
     ):
-        child = sub.add_parser(name, help=text, add_help=name not in {"figma", "design"})
+        child = sub.add_parser(name, help=text)
         child.add_argument("rest", nargs=argparse.REMAINDER)
     init = sub.add_parser("init", help="write a starter swarm.yaml")
     init.add_argument("rest", nargs=argparse.REMAINDER)
