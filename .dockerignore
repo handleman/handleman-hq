@@ -1,0 +1,15 @@
+# Keep the Docker build context small and secret-free.
+.git
+.venv
+runs
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+cache.db
+.env
+.env.*
+!.env.example
+*.log
+node_modules
+frontend/dist

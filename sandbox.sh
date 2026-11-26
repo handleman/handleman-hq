@@ -11,12 +11,13 @@
 #
 # Commits: sandbox runs default to --no-commit because the container has no
 # git credentials. Review the diff on the host and commit there, or opt in:
-#   SWARM_SANDBOX_ALLOW_COMMIT=1 SWARM_SANDBOX_SSH=1 ./swarm/sandbox.sh ...
+#   SWARM_SANDBOX_ALLOW_COMMIT=1 SWARM_SANDBOX_SSH=1 ./sandbox.sh ...
 #
-# Usage: ./swarm/sandbox.sh [--dry-run] [spec] [task] [flow flags]
+# Usage: ./sandbox.sh [--dry-run] [spec] [task] [flow flags]
 set -euo pipefail
-cd "$(dirname "$0")/.."
-REPO="$PWD"
+cd "$(dirname "$0")"
+# The harness runs against the checkout it is invoked in (hq's model).
+REPO="${SWARM_SANDBOX_TARGET:-$PWD}"
 IMAGE="${SWARM_SANDBOX_IMAGE:-swarm-sandbox}"
 
 if [ "${1:-}" = "--dry-run" ]; then
@@ -73,14 +74,14 @@ if [ -f "$REPO/.env" ]; then
   COMMON=("${COMMON[@]}" --env-file "$REPO/.env" -v /dev/null:/work/.env:ro)
 fi
 if [ -f "$REPO/swarm/.env" ]; then
-  COMMON=("${COMMON[@]}" -v /dev/null:/work/swarm/.env:ro)
+  COMMON=("${COMMON[@]}" -v /dev/null:/work/.swarm.env:ro)
 fi
 if [ "${SWARM_SANDBOX_SSH:-0}" = "1" ]; then
   COMMON=("${COMMON[@]}" -v "$HOME/.ssh:/tmp/.ssh:ro" -e GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new")
 fi
 
 if [ "$DRY" = "1" ]; then
-  echo "docker build -t $IMAGE -f swarm/docker/Dockerfile ."
+  echo "docker build -t $IMAGE -f docker/Dockerfile ."
   print_cmd docker run "${COMMON[@]}" "$IMAGE" "$@"
   echo "# mounts: $REPO -> /work (only)" >&2
   exit 0
@@ -99,6 +100,6 @@ if [ "$ALLOW_COMMIT" = "1" ] && [ "${SWARM_SANDBOX_SSH:-0}" != "1" ]; then
 fi
 
 if [ "${SWARM_SANDBOX_NO_BUILD:-0}" != "1" ]; then
-  docker build -t "$IMAGE" -f swarm/docker/Dockerfile . >&2
+  docker build -t "$IMAGE" -f docker/Dockerfile . >&2
 fi
 exec docker run "${COMMON[@]}" "$IMAGE" "$@"

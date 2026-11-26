@@ -20,9 +20,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from swarm.paths import REPO_ROOT
 from swarm.spec_loader import task_key
 
-from swarm.paths import REPO_ROOT
 RUNS = REPO_ROOT / "swarm" / "runs"
 RETRY_LATER = RUNS / "retry_later.json"
 STOP_FILE = REPO_ROOT / "swarm" / "STOP"

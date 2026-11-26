@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from swarm.paths import REPO_ROOT
+
 RUNS = REPO_ROOT / "swarm" / "runs"
 
 

@@ -21,6 +21,7 @@ import sys
 from pathlib import Path
 
 from swarm.paths import REPO_ROOT
+
 FRONTEND = REPO_ROOT / "frontend"
 PLAYWRIGHT_BIN = FRONTEND / "node_modules" / ".bin" / "playwright"
 

@@ -40,8 +40,8 @@ from textual.widgets import Footer, Header, ListItem, ListView, Log, Static
 # The token/cost/duration formatters live in `swarm.humanlog` (018) so the
 # dashboard and the written report cannot format a number two different ways.
 from swarm.humanlog import fmt_cost, fmt_duration, fmt_tokens
-
 from swarm.paths import REPO_ROOT
+
 PANES = ("crew", "planner", "coder", "reviewer")
 ROLE_VARS = (
     ("planner", "SWARM_PLANNER_MODEL"),

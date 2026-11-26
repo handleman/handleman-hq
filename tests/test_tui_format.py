@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 
 from swarm.tui import (
     fmt_cost,
@@ -307,11 +306,12 @@ def test_short_model_strips_every_routing_prefix():
     assert short_model("bare-model") == "bare-model"
 
 
-def test_the_status_line_shows_the_spec_directory():
+def test_the_status_line_shows_the_spec_directory(tmp_path):
     """`028` and `028-route-comfort-profile` must not disagree on screen."""
     from swarm.spec_loader import spec_dir_name
 
-    root = Path(__file__).resolve().parents[1]
+    root = tmp_path
+    (root / "specs" / "product" / "028-route-comfort-profile").mkdir(parents=True)
     assert spec_dir_name(root, "028") == "028-route-comfort-profile"
     assert spec_dir_name(root, "028-route-comfort-profile") == "028-route-comfort-profile"
     # An unknown prefix degrades to the input rather than crashing the screen.

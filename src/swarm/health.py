@@ -9,10 +9,8 @@ non-zero with the tail when either is broken.
 from __future__ import annotations
 
 import subprocess
-from pathlib import Path
 
 from swarm.paths import REPO_ROOT
-
 
 _NOISE = (
     "[webserver]",

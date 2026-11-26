@@ -59,11 +59,10 @@ def test_sandbox_masks_dotenv_when_present():
 def test_dockerfile_and_build_context_are_sane():
     dockerfile = (REPO / "docker" / "Dockerfile").read_text()
     assert 'ENTRYPOINT ["python", "-m", "swarm.flow"]' in dockerfile
-    assert "requirements.txt" in dockerfile and "requirements-dev.txt" in dockerfile
-    assert "PYTHONPATH=/work" in dockerfile
+    assert "pyproject.toml" in dockerfile and "pip install ." in dockerfile
 
     ignore = (REPO / ".dockerignore").read_text().splitlines()
-    for pattern in (".env", "swarm/.venv", "swarm/runs", "frontend/node_modules"):
+    for pattern in (".env", ".venv", "runs", "**/__pycache__"):
         assert pattern in ignore
 
 

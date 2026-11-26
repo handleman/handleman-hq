@@ -2,6 +2,19 @@
 
 from __future__ import annotations
 
+import pytest
+
+from swarm.paths import REPO_ROOT as _ROOT
+
+# Driver test: `corridor_check` imports the app's comfort/overpass modules and is
+# relocated with the other drivers in 048 Phase 4. The factory has no `app/`.
+pytestmark = [
+    pytest.mark.driver,
+    pytest.mark.skipif(
+        not (_ROOT / "app").is_dir(), reason="driver test: needs the app tree"
+    ),
+]
+
 from swarm import corridor_check
 
 

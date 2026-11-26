@@ -148,7 +148,7 @@ def test_lenient_checkpoint_keeps_prefix_on_drift(tmp_path):
     prev.mkdir(parents=True)
     (prev / "meta.json").write_text('{"spec": "001-x", "task": "T1"}')
     # Delta paths are repo-relative: the file must still exist in the repo.
-    drifted = "AGENTS.md"
+    drifted = "README.md"
     steps = ["STEP 1: a", "STEP 2: b", "STEP 3: c"]
     payload = {
         "spec": "001-x",

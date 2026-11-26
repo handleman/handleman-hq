@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from swarm.paths import REPO_ROOT
+
 RUNS_DIR = REPO_ROOT / "swarm" / "runs"
 REPORT_NAME = "human_log.txt"
 MAX_EVENTS = 80

@@ -40,6 +40,7 @@ from pathlib import Path
 from typing import Any
 
 from swarm.paths import REPO_ROOT
+
 DISABLE_ENV = "SWARM_ACCEPT"
 VISION_ENV = "SWARM_ACCEPT_VISION"
 QUEUE_ENV = "SWARM_ACCEPT_QUEUE"

@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from swarm.paths import REPO_ROOT
+
 SPEC_HASH_FILES = ("spec.md", "plan.md")
 
 _TASK_RE = re.compile(r"^Swarm-Task:\s*(\S+)/(T\d+)\s*$", re.MULTILINE)

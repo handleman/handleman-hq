@@ -105,9 +105,8 @@ def test_fill_from_dotenv_tolerates_a_missing_file(tmp_path: Path):
 
 
 def test_the_replay_disables_stash_hygiene(tmp_path: Path):
-    from pathlib import Path as P
 
-    source = (P(__file__).resolve().parents[1] / "bench" / "live.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "bench" / "live.py").read_text()
     assert '"SWARM_STASH_UNRELATED"] = "0"' in source
 
 

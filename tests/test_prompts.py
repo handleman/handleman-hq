@@ -38,7 +38,7 @@ def test_stable_prefix_moves_with_the_role():
     assert "FINDING:" in verifier
 
 
-def test_coder_prefix_can_carry_the_acs_for_the_ab(monkeypatch):
+def test_coder_prefix_can_carry_the_acs_for_the_ab(monkeypatch, spec_repo):
     task = _task()
     monkeypatch.delenv("SWARM_CODER_ACS", raising=False)
     assert "ACCEPTANCE CRITERIA" not in prompts.stable_prefix(task, "020-harness-efficiency", "step")
@@ -50,7 +50,7 @@ def test_coder_prefix_can_carry_the_acs_for_the_ab(monkeypatch):
     monkeypatch.delenv("SWARM_CODER_ACS")
 
 
-def test_verifier_prefix_carries_the_referenced_acceptance_criteria():
+def test_verifier_prefix_carries_the_referenced_acceptance_criteria(spec_repo):
     task = _task()
     prefix = prompts.stable_prefix(task, "020-harness-efficiency", "verifier")
     assert "ACCEPTANCE CRITERIA" in prefix
@@ -63,7 +63,7 @@ def test_verifier_prefix_carries_the_referenced_acceptance_criteria():
     assert task.brief in coder
 
 
-def test_plan_lines_are_in_the_verifier_prefix_not_the_coder_prefix():
+def test_plan_lines_are_in_the_verifier_prefix_not_the_coder_prefix(spec_repo):
     task = SpecTask(id="T1", ac_refs=("AC-1",), brief="Add `swarm/bench/corpus.py`.")
     coder = prompts.stable_prefix(task, "020-harness-efficiency", "step")
     verifier = prompts.stable_prefix(task, "020-harness-efficiency", "verifier")
@@ -207,7 +207,7 @@ def test_the_planner_step_budget_is_a_knob(monkeypatch):
     monkeypatch.delenv("SWARM_PLAN_MAX_STEPS")
 
 
-def test_the_verifier_prefix_carries_the_task_scope_line():
+def test_the_verifier_prefix_carries_the_task_scope_line(spec_repo):
     from swarm.spec_loader import SpecTask
 
     task = SpecTask(id="T1", ac_refs=("AC-1",), brief="Add `swarm/bench/corpus.py`.")

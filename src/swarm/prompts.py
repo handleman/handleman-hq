@@ -24,12 +24,11 @@ import hashlib
 import os
 import re
 import shlex
-from pathlib import Path
 from typing import Any
 
+from swarm.paths import REPO_ROOT
 from swarm.spec_loader import SpecTask
 
-from swarm.paths import REPO_ROOT
 MAX_STEPS = 8
 MAX_AC_CHARS = 900
 # 021 T5: put the referenced AC paragraphs back into the coder prefix. 020 T2

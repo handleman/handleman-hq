@@ -21,9 +21,8 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def main() -> int:
     os.environ.pop("ROUTE_FIXTURES", None)  # real providers only
     sys.path.insert(0, REPO)
-    from fastapi.testclient import TestClient
-
     from app import main as app_main
+    from fastapi.testclient import TestClient
 
     body = {
         "start": os.getenv("SMOKE_START", "Marienplatz, Munich"),

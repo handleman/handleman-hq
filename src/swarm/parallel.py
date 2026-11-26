@@ -36,8 +36,8 @@ from typing import Any
 
 from swarm import prompts
 from swarm.bench import live
-
 from swarm.paths import REPO_ROOT
+
 INTEGRATION_SCOPE = ("app/", "frontend/", "tests/", "contracts/", "requirements", "pyproject.toml", ".gitignore")
 
 

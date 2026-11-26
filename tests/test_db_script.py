@@ -7,8 +7,6 @@ than a broken line) when the container is absent.
 
 from __future__ import annotations
 
-import swarm
-
 import subprocess
 from pathlib import Path
 

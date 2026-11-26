@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 
 from crewai import Agent, Crew, Process, Task
 
@@ -75,8 +74,6 @@ from swarm.tools_guarded import (
     ShellTool,
     TrimmedFileReadTool,
 )
-
-from swarm.paths import REPO_ROOT
 
 
 def _tools(*, allow_gates: bool = False, role: str = "coder") -> list[object]:

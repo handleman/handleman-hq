@@ -16,21 +16,21 @@ from swarm.tools_guarded import (
 
 
 def test_search_returns_path_line_text():
-    out = SearchTool()._run(r"def gate_commands\(", "swarm")
-    assert out.startswith("swarm/flow.py:")
+    out = SearchTool()._run(r"def gate_commands\(", "src/swarm")
+    assert out.startswith("src/swarm/flow.py:")
     line = out.splitlines()[0]
     assert ": " in line and "def gate_commands" in line
 
 
 def test_search_is_bounded():
-    out = SearchTool(max_results=3)._run(r"def ", "swarm")
+    out = SearchTool(max_results=3)._run(r"def ", "src/swarm")
     assert "stopped at 3 matches" in out
     assert len([ln for ln in out.splitlines() if ": " in ln]) == 3
 
 
 def test_search_can_be_limited_to_a_file_and_reports_no_match():
-    assert SearchTool()._run("select_gates", "swarm/gates.py").startswith("swarm/gates.py:")
-    assert SearchTool()._run("zzz-not-there-zzz", "swarm/gates.py") == "(no matches for 'zzz-not-there-zzz')"
+    assert SearchTool()._run("select_gates", "src/swarm/gates.py").startswith("src/swarm/gates.py:")
+    assert SearchTool()._run("zzz-not-there-zzz", "src/swarm/gates.py") == "(no matches for 'zzz-not-there-zzz')"
 
 
 def test_search_refuses_escape_and_secrets():

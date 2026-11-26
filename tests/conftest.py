@@ -27,3 +27,43 @@ def _default_swarm_env(monkeypatch):
     for key, value in {**_MODEL_DEFAULTS, **_KEY_DEFAULTS}.items():
         if not os.environ.get(key):
             monkeypatch.setenv(key, value)
+
+
+_SPEC_MD = """# 020 harness efficiency
+
+- **AC-2 — cache hints.** Prompt cache hints lower the cost of every step.
+- **AC-3 — prompt size.** The prefix stays byte-identical across steps.
+"""
+
+_PLAN_MD = """# Plan
+
+STEP 1: add `swarm/bench/corpus.py` with the replay cases.
+STEP 2: wire the corpus into the bench entry point.
+"""
+
+_TASKS_MD = """# Tasks
+
+- [x] T1 (AC-1): Add `swarm/bench/corpus.py`.
+- [ ] T2 (AC-2, AC-3): Keep the prompt prefix stable.
+"""
+
+
+@pytest.fixture
+def spec_repo(tmp_path, monkeypatch):
+    """A repo root with product specs, for name/AC/plan resolution.
+
+    The factory ships no `specs/product/` (those stay in the app repo), so tests
+    that resolve a spec directory or read its AC/plan text need a fixture root.
+    """
+    root = tmp_path / "repo"
+    for name in ("001-example-app", "020-harness-efficiency"):
+        spec = root / "specs" / "product" / name
+        spec.mkdir(parents=True)
+        (spec / "spec.md").write_text(_SPEC_MD)
+        (spec / "plan.md").write_text(_PLAN_MD)
+        (spec / "tasks.md").write_text(_TASKS_MD)
+    from swarm import flow, prompts
+
+    monkeypatch.setattr(prompts, "REPO_ROOT", root, raising=False)
+    monkeypatch.setattr(flow, "REPO_ROOT", root, raising=False)
+    return root

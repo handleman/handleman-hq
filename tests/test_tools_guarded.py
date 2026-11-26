@@ -114,6 +114,12 @@ def test_gate_classifier_scope():
 
 
 def test_qa_shell_can_run_gates():
+    import pytest
+
+    from swarm.paths import REPO_ROOT as _root
+
+    if not (_root / ".venv").exists():
+        pytest.skip("needs an installed venv (the factory CI creates one)")
     assert ShellTool()._run("pytest -q").startswith("exit=")
 
 

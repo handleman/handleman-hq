@@ -29,7 +29,7 @@ def _fake_git(monkeypatch, changed, calls):
     monkeypatch.setattr(subprocess, "run", fake_run)
 
 
-def test_commit_adds_only_scope_files(monkeypatch):
+def test_commit_adds_only_scope_files(monkeypatch, spec_repo):
     calls = []
     monkeypatch.setenv("SWARM_MERGE_MODE", "direct")
     _fake_git(monkeypatch, ["app/x.py", "swarm/crew.py", "docs/m.md"], calls)
@@ -384,7 +384,7 @@ def test_commit_can_use_explicit_run_delta(monkeypatch):
     assert calls[0] == ["git", "add", "-A", "--", "app/x.py"]
 
 
-def test_push_failure_is_not_ok(monkeypatch):
+def test_push_failure_is_not_ok(monkeypatch, spec_repo):
     monkeypatch.setenv("SWARM_MERGE_MODE", "direct")
 
     class _PushFail(_FakeProc):
@@ -772,7 +772,7 @@ def test_branch_name_is_sanitized():
     assert _branch_name("001/x y", "T3:z") == "swarm/001-x-y-T3-z"
 
 
-def test_merge_mode_happy_path(monkeypatch):
+def test_merge_mode_happy_path(monkeypatch, spec_repo):
     calls = _merge_git(monkeypatch)
     rec = _commit_changes("001", "T2", "do things", paths=["app/x.py"])
     assert rec["ok"] == "1"

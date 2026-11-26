@@ -35,6 +35,21 @@ packages = ["src/swarm"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "driver: needs the app tree (relocated to drivers/ in 048 Phase 4)",
+]
 
 [tool.ruff]
 line-length = 100
+
+# Broad-except resilience is deliberate in these modules: event listeners and the
+# TUI must never crash the pilot on a transient LLM/tool error, and the flow maps
+# failures to codes instead of tracebacks. Paths follow the src layout.
+[tool.ruff.lint.per-file-ignores]
+"src/swarm/events.py" = ["BLE001", "S110"]
+"src/swarm/tui.py" = ["BLE001", "S110"]
+"src/swarm/flow.py" = ["BLE001"]
+"src/swarm/llms.py" = ["BLE001", "S110"]
+# PEP 695 type parameters would change a public helper signature for no
+# runtime benefit; the generic TypeVar form is deliberate.
+"src/swarm/retry.py" = ["UP047"]

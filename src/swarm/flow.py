@@ -26,8 +26,8 @@ from crewai.flow.flow import Flow, listen, start
 from pydantic import BaseModel
 
 from swarm import artifacts, compaction, fixcause, journal, llms
-
 from swarm.paths import REPO_ROOT
+
 with contextlib.suppress(Exception):
     # budgets/merge flags must be visible before SwarmFlow.__init__ reads them
     from dotenv import load_dotenv

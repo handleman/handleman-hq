@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import datetime
 import subprocess
-from pathlib import Path
 
 from swarm.paths import REPO_ROOT
 
