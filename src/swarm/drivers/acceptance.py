@@ -59,6 +59,8 @@ CHECK_KINDS = (
     "value_set",
     "route_request",
     "console_errors",
+    "click",
+    "wait_for",
 )
 
 _AC_RE = re.compile(r"^\s*[-*]?\s*\*\*(AC-\d+)\s*[—–:-]\s*(.+?)\*\*\s*(.*)$")
