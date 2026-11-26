@@ -11,6 +11,8 @@ from pathlib import Path
 from swarm import contract as contract_mod
 from swarm.design import checks, oauth, sync
 from swarm.design.config import DesignConfig, DesignConfigError, load_design
+from swarm.design.mcp import DesignError
+from swarm.design.rest import RestError
 from swarm.paths import target_root
 
 
@@ -145,7 +147,7 @@ def main(argv: list[str] | None = None) -> int:
     root = target_root()
     try:
         return _run(args, root)
-    except (DesignConfigError, checks.DesignCheckError) as exc:
+    except (DesignConfigError, checks.DesignCheckError, DesignError, RestError) as exc:
         print(f"design: {exc}", file=sys.stderr)
         return 2
 
