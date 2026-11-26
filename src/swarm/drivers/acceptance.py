@@ -45,6 +45,7 @@ from swarm.paths import REPO_ROOT
 DISABLE_ENV = "SWARM_ACCEPT"
 VISION_ENV = "SWARM_ACCEPT_VISION"
 QUEUE_ENV = "SWARM_ACCEPT_QUEUE"
+STRICT_ENV = "SWARM_ACCEPT_STRICT"
 COMMIT_ENV = "SWARM_ACCEPT_COMMIT"
 MODEL_ENV = "SWARM_ACCEPT_MODEL"
 DEFAULT_VISION_MODEL = "openrouter/nvidia/nemotron-3.5-super-vl:free"
@@ -106,6 +107,8 @@ class SpecReport:
     vision: dict[str, dict[str, str]] = field(default_factory=dict)
     shots: dict[str, str] = field(default_factory=dict)
     queued: list[str] = field(default_factory=list)
+    not_applicable: dict[str, str] = field(default_factory=dict)
+    config_errors: list[str] = field(default_factory=list)
 
     @property
     def verdict(self) -> str:
@@ -116,6 +119,8 @@ class SpecReport:
             return "FAIL"
         if "pass" in verdicts:
             return "PASS"
+        if self.config_errors and os.getenv(STRICT_ENV, "0") == "1":
+            return "FAIL"
         return "UNVERIFIED"
 
     @property
@@ -440,6 +445,9 @@ def render_report(report: SpecReport, *, generated: str | None = None) -> str:
             f"| {ac} | {entry.get('verdict', 'unverified').upper()} | "
             f"{entry.get('source', 'none')} | {_cell(entry.get('evidence', ''))} |"
         )
+    if report.config_errors:
+        lines += ["", "## Configuration", ""]
+        lines += [f"- **WARN** {item}" for item in report.config_errors]
     lines += ["", "## Global checks", ""]
     if report.global_failures:
         lines += [f"- **FAIL** {item}" for item in report.global_failures]
@@ -988,6 +996,13 @@ def run(
         report.not_applicable = load_not_applicable(spec_dir)
         for ac, note in report.not_applicable.items():
             report.ac_verdicts[ac] = {"verdict": "n/a", "evidence": note, "source": "declared"}
+        covered = {check.ac for check in report.checks} | set(report.not_applicable)
+        uncovered = [c.id for c in report.criteria if c.id not in covered]
+        if uncovered:
+            report.config_errors.append(
+                f"no acceptance.toml check or not_applicable entry for {', '.join(uncovered)}"
+            )
+            log(f"acceptance: {report.spec} config: no check for {', '.join(uncovered)}")
         artifacts.append(write_report(spec_dir, report))
         if queue and os.getenv(QUEUE_ENV, "1") != "0":
             tasks_path = spec_dir / "tasks.md"
@@ -1040,6 +1055,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-vision", action="store_true", help="skip the vision call")
     parser.add_argument("--no-queue", action="store_true", help="do not append fix tasks")
     parser.add_argument("--no-build", action="store_true", help="reuse frontend/dist")
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="fail the pass when an AC has no check or not_applicable entry",
+    )
     parser.add_argument("--base-url", default=None, help="use an already-running app")
     args = parser.parse_args(argv)
     if os.getenv(DISABLE_ENV, "1") == "0":
@@ -1047,6 +1067,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.no_vision:
         os.environ[VISION_ENV] = "0"
+    if args.strict:
+        os.environ[STRICT_ENV] = "1"
     result = run(
         specs=args.spec or None,
         queue=not args.no_queue,

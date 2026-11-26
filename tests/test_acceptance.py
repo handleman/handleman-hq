@@ -498,3 +498,15 @@ def test_na_counts_as_na_and_renders(tmp_path):
     report.not_applicable = {"AC-5": "no UI"}
     assert report.counts["n/a"] == 1
     assert "N/A" in render_report(report)
+
+
+def test_strict_makes_an_uncovered_ac_fatal(monkeypatch):
+    from swarm.drivers.acceptance import SpecReport
+
+    report = SpecReport(spec="x", title="x", criteria=[], checks=[])
+    report.ac_verdicts = {"AC-1": {"verdict": "pass", "evidence": "", "source": "probe"}}
+    report.config_errors = ["no check for AC-2"]
+    monkeypatch.delenv("SWARM_ACCEPT_STRICT", raising=False)
+    assert report.verdict == "PASS"
+    monkeypatch.setenv("SWARM_ACCEPT_STRICT", "1")
+    assert report.verdict == "FAIL"
