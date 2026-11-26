@@ -75,6 +75,8 @@ swarm.yaml.example  the contract, every key documented
 - [`docs/fix-loop.md`](docs/fix-loop.md) — tests-first, repair budget, telemetry, anti-loop guards.
 - [`docs/timing.md`](docs/timing.md) — phase timing, wall budget, timeouts, concurrency.
 - [`docs/troubleshooting.md`](docs/troubleshooting.md) — traces and what each stop means.
+- [`specs/harness/ROADMAP.md`](specs/harness/ROADMAP.md) — the remaining harness order
+  (provider matrix, driver relocation, coverage).
 - [`docs/model-usage.md`](docs/model-usage.md) — model recommendations per role.
 
 ## Status
@@ -83,6 +85,12 @@ swarm.yaml.example  the contract, every key documented
 `hq` CLI, `swarm.yaml`); the factory's own suite is green with no target tree.
 Driver relocation (browser suite/acceptance as the target's `drivers/`) and the
 full app migration land in v0.3. See `CHANGELOG.md` when present.
+
+## Roadmap
+
+See [`specs/harness/ROADMAP.md`](specs/harness/ROADMAP.md): the provider matrix
+(055) first, then moving the drivers into target repos (v0.4), then acceptance
+coverage and the per-task visual phase.
 
 ## Contributing
 
