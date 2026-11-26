@@ -113,6 +113,7 @@ class Contract:
     e2e_dir: str = DEFAULT_E2E_DIR
     lock_dir: str = DEFAULT_LOCK_DIR
     runs_dir: str = DEFAULT_RUNS_DIR
+    drivers: dict[str, str] = field(default_factory=dict)
     gate_map: tuple[tuple[str, tuple[str, ...]], ...] = DEFAULT_GATE_MAP
     risk_classes: dict[int, tuple[str, ...]] = field(
         default_factory=lambda: dict(DEFAULT_RISK_CLASSES)
@@ -233,10 +234,27 @@ def load(root: Path | None = None, *, text: str | None = None) -> Contract:
         e2e_dir=e2e_dir,
         lock_dir=_as_str(raw.get("lock_dir"), "lock_dir"),
         runs_dir=_as_str(raw.get("runs_dir"), "runs_dir") or DEFAULT_RUNS_DIR,
+        drivers=_drivers(raw.get("drivers")),
         gate_map=_gate_map(raw.get("gate_map")) or DEFAULT_GATE_MAP,
         source=source,
         extra=extra,
     )
+
+
+def _drivers(raw: Any) -> dict[str, str]:
+    """`drivers: {e2e, acceptance, smoke, db}` — command strings (056 AC-1)."""
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise ContractError("drivers must be a mapping of kind -> command")
+    out: dict[str, str] = {}
+    for kind, command in raw.items():
+        name = str(kind).strip()
+        value = _as_str(command, f"drivers.{name}")
+        if not name or not value:
+            continue
+        out[name] = value
+    return out
 
 
 def _risk_classes(raw: Any) -> dict[int, tuple[str, ...]]:
@@ -315,6 +333,7 @@ def main() -> int:
     print(f"gate_map   {len(contract.gate_map)} rule(s)")
     print(f"e2e        {contract.e2e_prefix()}")
     print(f"runs       {contract.runs_dir}")
+    print(f"drivers    {contract.drivers or 'packaged'}")
     return 0
 
 

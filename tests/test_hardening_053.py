@@ -218,6 +218,16 @@ def test_the_inner_task_cap_allows_a_stale_suite_migration():
     assert inner.MAX_TASKS >= 11
 
 
+def _health_dispatch(monkeypatch, exit_code: int):
+    from swarm.drivers import dispatch
+
+    monkeypatch.setattr(
+        dispatch,
+        "run",
+        lambda kind, params=None, **kw: dispatch.DriverResult(kind, "packaged", exit_code),
+    )
+
+
 def test_swarm_health_reports_ok(monkeypatch, tmp_path):
     from swarm.drivers import health
 
@@ -227,26 +237,24 @@ def test_swarm_health_reports_ok(monkeypatch, tmp_path):
         calls.append(label)
 
     monkeypatch.setattr(health, "_run", fake_run)
+    _health_dispatch(monkeypatch, 0)
     monkeypatch.setattr(health, "REPO_ROOT", tmp_path)
     (tmp_path / ".venv" / "bin").mkdir(parents=True)
     (tmp_path / ".venv" / "bin" / "python").write_text("")
-    (tmp_path / "swarm" / ".venv" / "bin").mkdir(parents=True)
-    (tmp_path / "swarm" / ".venv" / "bin" / "python").write_text("")
 
     assert health.check() == []
     assert health.main() == 0
-    assert calls == ["app tests", "e2e suite"] * 2
+    assert calls == ["app tests"] * 2
 
 
 def test_swarm_health_fails_loudly(monkeypatch, tmp_path):
     from swarm.drivers import health
 
     monkeypatch.setattr(health, "_run", lambda argv, label: f"{label}: exit 1\nboom")
+    _health_dispatch(monkeypatch, 1)
     monkeypatch.setattr(health, "REPO_ROOT", tmp_path)
     (tmp_path / ".venv" / "bin").mkdir(parents=True)
     (tmp_path / ".venv" / "bin" / "python").write_text("")
-    (tmp_path / "swarm" / ".venv" / "bin").mkdir(parents=True)
-    (tmp_path / "swarm" / ".venv" / "bin" / "python").write_text("")
 
     problems = health.check()
     assert len(problems) == 2

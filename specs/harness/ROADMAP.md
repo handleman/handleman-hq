@@ -40,9 +40,10 @@ Design: [`055-provider-matrix/`](055-provider-matrix/). Research:
 6. `[x]` **T6 prices** — first-class families priced; unpaid/unpriced warns.
 7. `[x]` **T7 regression** — pytest/ruff/mypy green, no network in tests.
 
-## Now — v0.4 driver relocation (048 T11–T12) — **design done**
+## Now — v0.4 driver relocation (048 T11–T12) — **core done**
 
-Spec: [`056-driver-relocation/`](056-driver-relocation/) (design only; v0.4 starts at T1).
+Spec: [`056-driver-relocation/`](056-driver-relocation/). T1–T4/T6 landed (contract,
+dispatch, wiring, docs); T5 (app migration) remains.
 
 8. `[ ]` Move `smoke`, `corridor_check`, `db.sh`, the app-specific acceptance
    parts into the **target repos** under `drivers/`; the core calls them through

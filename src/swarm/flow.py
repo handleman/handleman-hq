@@ -19,6 +19,7 @@ import threading
 import time
 import uuid
 from collections.abc import Callable, Iterable, Mapping
+from dataclasses import field
 from pathlib import Path
 from typing import Any
 
@@ -150,6 +151,8 @@ class SwarmState(BaseModel):
     reverted_archive: list[str] = []
     no_progress: bool = False
     ungrounded_block: bool = False
+    # 056: which driver source each phase used (target command vs packaged).
+    drivers: dict[str, str] = field(default_factory=dict)
 
 
 class _QuotaExhausted(SystemExit):
@@ -4071,59 +4074,35 @@ class SwarmFlow(Flow[SwarmState]):
         return result
 
     def _run_e2e_deterministically(self, specs: list[str]) -> None:
-        """Run the browser suite when QA recorded none (2026-11-26).
+        """Run the browser suite when QA recorded none (056: through the driver).
 
-        T6's QA answered PASS without ever executing `test:e2e` (0 recorded
-        executions), so the evidence guard could only stop `e2e_unclassified`.
-        The command is known and deterministic: the harness runs it itself and
-        records it in `shell_log`, so evidence, triage and reason codes stay the
-        same as an agent's run. A launch failure is recorded as-is (class `env`
-        downstream), never as "the suite passed".
+        A target may declare `drivers.e2e` in `swarm.yaml`; otherwise the packaged
+        implementation runs. Either way the execution is recorded in `shell_log`
+        with its tail, so evidence, triage and reason codes stay identical.
         """
         import time as _time
 
         from swarm import evidence as _evidence
-        from swarm.drivers import e2e as _e2e
+        from swarm.drivers import dispatch
 
+        started = _time.monotonic()
+        result = dispatch.run("e2e", {"specs": specs}, root=REPO_ROOT)
         argv = ["npm", "--prefix", "frontend", "run", "test:e2e"]
         if specs:
             argv += ["--", *specs]
-        started = _time.monotonic()
-        code = 1
-        tail = ""
-        try:
-            build = subprocess.run(
-                ["npm", "run", "build"],
-                cwd=_e2e.FRONTEND,
-                capture_output=True,
-                text=True,
-                timeout=600,
-                check=False,
-            )
-            suite = subprocess.run(
-                ["npx", "playwright", "test", *specs],
-                cwd=_e2e.FRONTEND,
-                capture_output=True,
-                text=True,
-                timeout=1800,
-                check=False,
-            )
-            code = int(suite.returncode)
-            tail = suite.stdout + suite.stderr
-            if build.returncode != 0:
-                code = int(build.returncode)
-                tail = build.stdout + build.stderr + "\n" + tail
-        except (OSError, subprocess.SubprocessError) as exc:
-            tail = f"e2e launch failed: {exc}"
-        print(f"$ {' '.join(argv)}  (harness-run) exit={code}", flush=True)
+        self.state.drivers = {**(self.state.drivers or {}), "e2e": result.source}
+        print(
+            f"$ {' '.join(argv)}  ({result.source} driver) exit={result.exit}",
+            flush=True,
+        )
         _evidence.append_execution(
             self.run_dir / _evidence.SHELL_LOG,
             agent="harness-e2e",
             argv=argv,
-            exit_code=code,
+            exit_code=result.exit,
             duration_ms=int((_time.monotonic() - started) * 1000),
             changed_after=self._evidence_hash(),
-            tail=tail,
+            tail=result.tail,
         )
 
     def _e2e_self_heal(self) -> bool:
@@ -4436,6 +4415,7 @@ class SwarmFlow(Flow[SwarmState]):
             },
             "budget_note": self.state.budget_note,
             "host_suspended": suspended,
+            "drivers": self.state.drivers,
             "done": {"task_hash": task_hash_value, "spec_hash": spec_hash_value, "recorded": False},
             "resumed_from_step": self.state.resumed_from_step,
             "recovery": self.state.recovery,

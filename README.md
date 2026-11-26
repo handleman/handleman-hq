@@ -59,6 +59,7 @@ swarm.yaml.example  the contract, every key documented
 - [`docs/how-it-works.md`](docs/how-it-works.md) — roles, phase order, the flow diagram, the invariant.
 - [`docs/setup.md`](docs/setup.md) — venv, model tiers/routing, preflight.
 - [`docs/model-usage.md`](docs/model-usage.md) — which kind of model each role needs; **review needs reasoning**.
+- [`docs/drivers.md`](docs/drivers.md) — declaring the target's e2e/acceptance/smoke/db drivers (JSON protocol, fallback).
 - [`docs/providers.md`](docs/providers.md) — every supported provider: prefix, key env, base, recipes, and the key-free reachability probe.
 - [`docs/running.md`](docs/running.md) — dashboard, resume rules, escalation.
 - [`docs/queue.md`](docs/queue.md) — how tasks are found, reopened, and added.

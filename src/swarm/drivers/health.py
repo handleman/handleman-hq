@@ -9,7 +9,6 @@ non-zero with the tail when either is broken.
 from __future__ import annotations
 
 import subprocess
-import sys
 
 from swarm.paths import REPO_ROOT
 
@@ -74,9 +73,17 @@ def check() -> list[str]:
             problems.append(problem)
     else:
         problems.append(f"app venv missing: {app_python} (run `make dev-setup`)")
-    problem = _run([sys.executable, "-m", "swarm.drivers.e2e"], label="e2e suite")
-    if problem:
-        problems.append(problem)
+    from swarm.drivers import dispatch
+
+    try:
+        result = dispatch.run("e2e", {}, root=REPO_ROOT)
+    except dispatch.DriverError as exc:
+        problems.append(f"e2e suite: {exc}")
+    else:
+        if not result.ok:
+            problems.append(
+                f"e2e suite ({result.source}): exit {result.exit}\n{_tail(result.tail)}"
+            )
     return problems
 
 
