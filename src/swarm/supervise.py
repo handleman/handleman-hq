@@ -217,8 +217,21 @@ def _existing_later(path: Path) -> list[str]:
     return [str(v) for v in data.get("retry_later", [])] if isinstance(data, dict) else []
 
 
+def _runner_script(root: Path | None = None) -> Path:
+    """The target's queue runner: `harness/run.sh`, a legacy `swarm/run.sh`, or root."""
+    base = Path(root or REPO_ROOT)
+    for rel in ("harness/run.sh", "swarm/run.sh", "run.sh"):
+        path = base / rel
+        if path.is_file():
+            return path
+    raise SystemExit(
+        f"no queue runner found under {base} (expected harness/run.sh, swarm/run.sh "
+        "or run.sh) — see docs/drivers.md"
+    )
+
+
 def _default_runner() -> int:
-    cmd = [str(REPO_ROOT / "swarm" / "run.sh"), "--resume"]
+    cmd = [str(_runner_script()), "--resume"]
     return subprocess.run(cmd, cwd=REPO_ROOT, check=False).returncode
 
 

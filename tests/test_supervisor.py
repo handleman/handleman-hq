@@ -460,3 +460,30 @@ def test_resume_does_not_pin_a_red_task_the_ledger_already_retired(tmp_path, mon
     monkeypatch.setattr(flow, "_first_open_task", lambda root, skip=None: None)
 
     assert flow._resume_point(tmp_path) == ("990-alpha", "T6")
+
+def test_the_default_runner_finds_the_target_script(tmp_path):
+    from swarm import supervise
+
+    (tmp_path / "harness").mkdir()
+    (tmp_path / "harness" / "run.sh").write_text("#!/bin/sh\n")
+    assert supervise._runner_script(tmp_path) == tmp_path / "harness" / "run.sh"
+
+
+def test_the_default_runner_prefers_the_new_layout(tmp_path):
+    from swarm import supervise
+
+    (tmp_path / "harness").mkdir()
+    (tmp_path / "harness" / "run.sh").write_text("#!/bin/sh\n")
+    (tmp_path / "swarm").mkdir()
+    (tmp_path / "swarm" / "run.sh").write_text("#!/bin/sh\n")
+    assert supervise._runner_script(tmp_path).name == "run.sh"
+    assert supervise._runner_script(tmp_path).parent.name == "harness"
+
+
+def test_a_missing_runner_is_a_typed_error(tmp_path):
+    import pytest
+
+    from swarm import supervise
+
+    with pytest.raises(SystemExit, match="no queue runner"):
+        supervise._runner_script(tmp_path)
