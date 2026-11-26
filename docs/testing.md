@@ -108,3 +108,29 @@ A green task records an **advisory** visual verdict in `run.json.visual`:
   and surfaced, **never used to flip green**: gates and the verifier still decide.
 - `SWARM_VISUAL_QA=0` disables the phase; a missing Playwright install or a dead
   stand is recorded as `checked: false` + `error`, never raised.
+
+## Acceptance checks (`acceptance.toml`)
+
+Each built product spec declares what the acceptance pass proves in the browser:
+
+```toml
+[[check]]
+ac = "AC-4"
+kind = "route_request"
+selector = "input[placeholder='e.g. Englischer Garten']"
+value = "Marienplatz, Munich"
+origin = "Englischer Garten"   # optional; default "Marienplatz, Munich"
+viewport = "desktop"           # desktop | mobile | both
+```
+
+Kinds: `exists`, `absent`, `count`, `min_count`, `text`, `value_set`, `click`,
+`wait_for`, `console_errors`, `route_request`. `route_request` fills and selects
+both endpoints (auto-plan only arms for *selected* suggestions) and asserts a
+`POST /route` fired; a check that needs a different pair than the previous one
+sets `origin`.
+
+Checks run sequentially inside a spec and the page **reloads at each spec
+boundary**: later checks can read state an earlier one produced, but an
+interaction in one spec never leaks into the next. `--strict` fails an AC with
+neither a check nor a `[[not_applicable]]` declaration, and `--selftest` mutates
+each target to prove the check can fail.

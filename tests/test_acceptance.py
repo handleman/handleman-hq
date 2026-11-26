@@ -532,3 +532,38 @@ def test_an_ok_or_unsupported_oracle_does_not_fail():
         {"ac": "AC-2", "kind": "absent", "verdict": "unsupported"},
     ]
     assert report.verdict == "PASS"
+
+
+def test_route_checks_accept_an_explicit_origin(tmp_path):
+    from swarm.drivers.acceptance import browser_plan, load_checks
+
+    spec = tmp_path / "001-spec"
+    spec.mkdir()
+    (spec / "spec.md").write_text("# Spec\n")
+    (spec / "acceptance.toml").write_text("""
+[[check]]
+ac = "AC-1"
+kind = "route_request"
+selector = "#dest"
+value = "Marienplatz, Munich"
+origin = "Englischer Garten"
+""")
+    checks = load_checks(spec)
+    assert checks[0].origin == "Englischer Garten"
+    plan = browser_plan([spec], base_url="http://x/", out_dir=tmp_path / "out")
+    assert plan["checks"][0]["origin"] == "Englischer Garten"
+
+
+def test_route_checks_default_to_an_empty_origin(tmp_path):
+    from swarm.drivers.acceptance import load_checks
+
+    spec = tmp_path / "001-spec"
+    spec.mkdir()
+    (spec / "spec.md").write_text("# Spec\n")
+    (spec / "acceptance.toml").write_text("""
+[[check]]
+ac = "AC-1"
+kind = "route_request"
+selector = "#dest"
+""")
+    assert load_checks(spec)[0].origin == ""

@@ -92,6 +92,7 @@ class Check:
     expect: Any = None
     viewport: str = "both"
     value: str = ""
+    origin: str = ""
     file: str = ""
     note: str = ""
 
@@ -273,6 +274,7 @@ def load_checks(spec_dir: Path) -> list[Check]:
                 expect=raw.get("expect"),
                 viewport=str(raw.get("viewport", "both")).strip() or "both",
                 value=str(raw.get("value", "")).strip(),
+                origin=str(raw.get("origin", "")).strip(),
                 file=str(raw.get("file", "")).strip(),
                 note=str(raw.get("note", "")).strip(),
             )
@@ -669,6 +671,7 @@ def browser_plan(
                     "expect": check.expect,
                     "viewport": check.viewport,
                     "value": check.value,
+                    "origin": check.origin,
                 }
             )
     layout_specs: list[dict[str, Any]] = []
