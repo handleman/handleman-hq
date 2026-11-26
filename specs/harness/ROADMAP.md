@@ -71,6 +71,9 @@ until they diverge. v0.4.0 released.
 - `[x]` **Check isolation:** the runner reloads at each spec boundary (an
   interaction in 007 hid the top card from 014/028/040), `route_request`
   resets its request counter and accepts an explicit `origin` (v0.4.9).
+- `[x]` **v0.5.1** publishes `location_denied` / `geo_step` (014 AC-1/AC-2/AC-6).
+  v0.5.0 carried the kinds in source but the wheel dropped them, so the plan
+  silently omitted the checks — a missing check must be reported, not skipped.
 - `[x]` Oracle self-test in the factory: `acceptance --selftest` mutates each
   check's target and fails a check that still passes; the report lists it.
   **Verified on the app: 14/14 strict + selftest, no always-passing check.**
