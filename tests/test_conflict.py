@@ -19,7 +19,7 @@ def _fake_git(*, merge_rc: int = 1, unmerged: str = "frontend/src/App.svelte\n")
     return calls, fake
 
 
-def test_commit_changes_keeps_a_crew_resolved_merge(monkeypatch):
+def test_commit_changes_keeps_a_crew_resolved_merge(monkeypatch, app_contract):
     calls, fake = _fake_git()
     monkeypatch.setattr(flow, "_git", fake)
     seen: dict[str, list[str]] = {}
@@ -40,7 +40,7 @@ def test_commit_changes_keeps_a_crew_resolved_merge(monkeypatch):
     assert ["merge", "--abort"] not in calls
 
 
-def test_commit_changes_aborts_when_the_crew_fails(monkeypatch):
+def test_commit_changes_aborts_when_the_crew_fails(monkeypatch, app_contract):
     calls, fake = _fake_git()
     monkeypatch.setattr(flow, "_git", fake)
     rec = flow._commit_changes(
@@ -57,7 +57,7 @@ def test_commit_changes_aborts_when_the_crew_fails(monkeypatch):
     assert ["merge", "--abort"] in calls
 
 
-def test_commit_changes_without_a_resolver_is_unchanged(monkeypatch):
+def test_commit_changes_without_a_resolver_is_unchanged(monkeypatch, app_contract):
     calls, fake = _fake_git()
     monkeypatch.setattr(flow, "_git", fake)
     rec = flow._commit_changes("016", "T1", "brief", paths=["frontend/src/App.svelte"])

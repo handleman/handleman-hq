@@ -8,7 +8,7 @@ import swarm
 from swarm import risk
 
 
-def test_the_risk_ladder():
+def test_the_risk_ladder(app_contract):
     assert risk.classify(["docs/runbooks/overnight-runs.md"]) == 0
     assert risk.classify(["README.md"]) == 0
     assert risk.classify(["tests/test_x.py"]) == 1
@@ -33,7 +33,7 @@ def test_unknown_paths_are_control():
     assert risk.classify(["scripts/new_tool.py"]) == 3
 
 
-def test_the_record_is_the_label_and_nothing_else():
+def test_the_record_is_the_label_and_nothing_else(app_contract):
     info = risk.record(changed=["frontend/src/App.svelte"], brief="wire walk mode")
     assert info == {"class": 2, "label": "logic"}
     assert risk.record(changed=[]) == {"class": 3, "label": "control"}

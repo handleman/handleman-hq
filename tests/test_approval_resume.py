@@ -66,7 +66,7 @@ def test_approve_refuses_worktree_drift(tmp_path, monkeypatch):
     assert json.loads((run / "run.json").read_text())["status"] == "awaiting_approval"
 
 
-def test_approve_refuses_new_in_scope_changes(tmp_path, monkeypatch):
+def test_approve_refuses_new_in_scope_changes(tmp_path, monkeypatch, app_contract):
     repo, _run = _setup(tmp_path, monkeypatch)
     (repo / "app" / "y.py").write_text("extra\n")
     monkeypatch.setattr(tg, "_git_changed", lambda: ["app/x.py", "app/y.py"])

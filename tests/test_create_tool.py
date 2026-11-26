@@ -1,7 +1,7 @@
 from swarm.tools_guarded import CreateTool
 
 
-def test_create_new_file_with_parents(tmp_path, monkeypatch):
+def test_create_new_file_with_parents(tmp_path, monkeypatch, app_contract):
     import swarm.tools_guarded as tg
 
     monkeypatch.setattr(tg, "REPO_ROOT", tmp_path)

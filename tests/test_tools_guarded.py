@@ -71,7 +71,7 @@ def test_the_browser_suite_is_an_allowlisted_gate_argv():
     assert coder._run(" ".join(suite)).startswith("BLOCKED: gates are QA-only")
 
 
-def test_edit_requires_exact_single_match(tmp_path, monkeypatch):
+def test_edit_requires_exact_single_match(tmp_path, monkeypatch, app_contract):
     import swarm.tools_guarded as tg
 
     (tmp_path / "app").mkdir()

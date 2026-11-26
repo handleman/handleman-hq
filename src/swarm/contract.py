@@ -29,40 +29,22 @@ from swarm.paths import REPO_ROOT
 CONTRACT_FILE = "swarm.yaml"
 
 # Today's behaviour, in one place (048 T9 moves the consumers here).
-DEFAULT_SPECS_DIR = "specs/product"
-DEFAULT_SCOPE: tuple[str, ...] = (
-    "app/",
-    "frontend/",
-    "tests/",
-    "contracts/",
-    "requirements-dev.txt",
-    "requirements.txt",
-    "pyproject.toml",
-    ".gitignore",
-)
+DEFAULT_SPECS_DIR = "specs/harness"
+DEFAULT_SCOPE: tuple[str, ...] = ("src/", "tests/")
 DEFAULT_GATES: tuple[str, ...] = ()
 # Affected-gate selection: a glob → the gates that delta can break. Moved here
 # from gates.DEFAULT_MAP so the factory and the app share one declaration.
 DEFAULT_GATE_MAP: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("app/**", ("pytest -q", "ruff check .", "mypy app tests")),
-    ("tests/**", ("pytest -q", "ruff check .", "mypy app tests")),
-    ("contracts/**", ("pytest -q",)),
-    (
-        "frontend/**",
-        (
-            "npm --prefix frontend run check",
-            "npm --prefix frontend run lint",
-            "npm --prefix frontend test -- --run",
-        ),
-    ),
+    ("src/**", ("pytest -q", "ruff check .")),
+    ("tests/**", ("pytest -q", "ruff check .")),
 )
-DEFAULT_E2E = "npm --prefix frontend run test:e2e"
-DEFAULT_RISK_PROFILE = "comfort-walking-router"
+DEFAULT_E2E = ""
+DEFAULT_RISK_PROFILE = "generic"
 # Path classes for the risk label (moved from risk.py). Class 3 is always the
 # fallback: an unrecognised delta must never look safe.
 DEFAULT_RISK_CLASSES: dict[int, tuple[str, ...]] = {
-    1: ("tests/", "frontend/e2e/", "e2e/"),
-    2: ("app/", "frontend/src/", "frontend/lib/", "contracts/"),
+    1: ("tests/", "e2e/"),
+    2: ("src/", "lib/"),
     3: (
         "swarm/",
         "specs/",
@@ -70,7 +52,6 @@ DEFAULT_RISK_CLASSES: dict[int, tuple[str, ...]] = {
         "docker/",
         "requirements",
         "pyproject.toml",
-        "app/auth",
         "auth",
         "migrations",
         "payments",
@@ -78,7 +59,7 @@ DEFAULT_RISK_CLASSES: dict[int, tuple[str, ...]] = {
         "infra",
     ),
 }
-DEFAULT_DB_SCRIPT = "swarm/db.sh"
+DEFAULT_DB_SCRIPT = ""
 DEFAULT_PYTHON_VENV = ".venv"
 DEFAULT_HARNESS_SPECS: tuple[str, ...] = (
     "009-swarm-harness",

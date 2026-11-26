@@ -67,3 +67,60 @@ def spec_repo(tmp_path, monkeypatch):
     monkeypatch.setattr(prompts, "REPO_ROOT", root, raising=False)
     monkeypatch.setattr(flow, "REPO_ROOT", root, raising=False)
     return root
+
+
+APP_CONTRACT = """\
+# The comfort-walking-router contract, used by tests that assert app behaviour.
+specs_dir: specs/product
+scope:
+  - app/
+  - frontend/
+  - tests/
+  - contracts/
+  - requirements-dev.txt
+  - requirements.txt
+  - pyproject.toml
+  - .gitignore
+gates:
+  - pytest -q
+  - ruff check .
+  - mypy app tests
+  - npm --prefix frontend run check
+  - npm --prefix frontend run lint
+  - npm --prefix frontend test -- --run
+  - npm --prefix frontend ci --dry-run
+e2e: npm --prefix frontend run test:e2e
+risk:
+  profile: comfort-walking-router
+  classes:
+    1: [tests/, frontend/e2e/, e2e/]
+    2: [app/, frontend/src/, frontend/lib/, contracts/]
+    3: [swarm/, specs/, .github/, docker/, requirements, pyproject.toml, app/auth, auth, migrations, payments, secrets, infra]
+gate_map:
+  'app/**': [pytest -q, ruff check ., mypy app tests]
+  'tests/**': [pytest -q, ruff check ., mypy app tests]
+  'contracts/**': [pytest -q]
+  'frontend/**': [npm --prefix frontend run check, npm --prefix frontend run lint, npm --prefix frontend test -- --run]
+db:
+  script: swarm/db.sh
+python:
+  venv: .venv
+"""
+
+
+@pytest.fixture
+def app_contract(tmp_path, monkeypatch):
+    """Point the contract at an app-shaped `swarm.yaml` (the app is a target repo).
+
+    The factory's own defaults are generic (`src/`, `tests/`); tests that assert
+    the comfort-walking-router's scope/gates/risk exercise its declared contract.
+    """
+    from swarm import contract
+
+    root = tmp_path / "app-repo"
+    root.mkdir()
+    (root / "swarm.yaml").write_text(APP_CONTRACT)
+    monkeypatch.setattr(contract, "REPO_ROOT", root)
+    contract._cached.cache_clear()
+    yield root
+    contract._cached.cache_clear()

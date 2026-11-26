@@ -19,7 +19,7 @@ def _select(changed, commands=None, **kwargs):
     return gates.select_gates(changed, commands or FULL, **kwargs)
 
 
-def test_backend_delta_selects_backend_gates_only():
+def test_backend_delta_selects_backend_gates_only(app_contract):
     selected, skipped = _select(["app/scoring.py", "tests/test_scoring.py"])
     assert selected == ["pytest -q", "ruff check .", "mypy app tests"]
     assert skipped == [
@@ -29,7 +29,7 @@ def test_backend_delta_selects_backend_gates_only():
     ]
 
 
-def test_frontend_delta_selects_frontend_gates_only():
+def test_frontend_delta_selects_frontend_gates_only(app_contract):
     selected, skipped = _select(["frontend/src/App.svelte"])
     assert selected == [
         "npm --prefix frontend run check",
@@ -112,7 +112,7 @@ def test_flow_state_and_payload_carry_the_selection_record():
     assert 'gate_selection.get("mode") == "affected"' in source
 
 
-def test_bench_counts_the_selected_gates_per_round():
+def test_bench_counts_the_selected_gates_per_round(app_contract):
     from swarm.bench import score
 
     case = {

@@ -29,7 +29,7 @@ def _fake_git(monkeypatch, changed, calls):
     monkeypatch.setattr(subprocess, "run", fake_run)
 
 
-def test_commit_adds_only_scope_files(monkeypatch, spec_repo):
+def test_commit_adds_only_scope_files(monkeypatch, spec_repo, app_contract):
     calls = []
     monkeypatch.setenv("SWARM_MERGE_MODE", "direct")
     _fake_git(monkeypatch, ["app/x.py", "swarm/crew.py", "docs/m.md"], calls)
@@ -365,7 +365,7 @@ def test_run_delta_ignores_preexisting_dirty_files(tmp_path, monkeypatch):
     assert tg.run_delta(baseline) == ["app/human.py", "app/owned.py"]
 
 
-def test_in_scope_changes_filters_secrets_and_out_of_scope(tmp_path, monkeypatch):
+def test_in_scope_changes_filters_secrets_and_out_of_scope(tmp_path, monkeypatch, app_contract):
     import swarm.tools_guarded as tg
 
     monkeypatch.setattr(tg, "REPO_ROOT", tmp_path)
@@ -374,7 +374,7 @@ def test_in_scope_changes_filters_secrets_and_out_of_scope(tmp_path, monkeypatch
     assert tg.scope_violations(changed) == ["swarm/crew.py", ".env"]
 
 
-def test_commit_can_use_explicit_run_delta(monkeypatch):
+def test_commit_can_use_explicit_run_delta(monkeypatch, app_contract):
     calls = []
     monkeypatch.setenv("SWARM_MERGE_MODE", "direct")
     monkeypatch.setattr("swarm.tools_guarded._git_changed", lambda: ["swarm/human.py"])
@@ -384,7 +384,7 @@ def test_commit_can_use_explicit_run_delta(monkeypatch):
     assert calls[0] == ["git", "add", "-A", "--", "app/x.py"]
 
 
-def test_push_failure_is_not_ok(monkeypatch, spec_repo):
+def test_push_failure_is_not_ok(monkeypatch, spec_repo, app_contract):
     monkeypatch.setenv("SWARM_MERGE_MODE", "direct")
 
     class _PushFail(_FakeProc):
@@ -772,7 +772,7 @@ def test_branch_name_is_sanitized():
     assert _branch_name("001/x y", "T3:z") == "swarm/001-x-y-T3-z"
 
 
-def test_merge_mode_happy_path(monkeypatch, spec_repo):
+def test_merge_mode_happy_path(monkeypatch, spec_repo, app_contract):
     calls = _merge_git(monkeypatch)
     rec = _commit_changes("001", "T2", "do things", paths=["app/x.py"])
     assert rec["ok"] == "1"
@@ -786,7 +786,7 @@ def test_merge_mode_happy_path(monkeypatch, spec_repo):
     assert ["push", "origin", "main"] in flat
 
 
-def test_merge_conflict_is_not_green(monkeypatch):
+def test_merge_conflict_is_not_green(monkeypatch, app_contract):
     calls = _merge_git(monkeypatch, merge_rc=1)
     rec = _commit_changes("001", "T2", "do things", paths=["app/x.py"])
     assert rec["ok"] == "0"
@@ -796,7 +796,7 @@ def test_merge_conflict_is_not_green(monkeypatch):
     assert ["push", "origin", "main"] not in flat
 
 
-def test_branch_push_failure_keeps_work_and_untouched_base(monkeypatch):
+def test_branch_push_failure_keeps_work_and_untouched_base(monkeypatch, app_contract):
     calls = _merge_git(monkeypatch, branch_push_rc=1)
     rec = _commit_changes("001", "T2", "do things", paths=["app/x.py"])
     assert rec["ok"] == "0"
@@ -806,7 +806,7 @@ def test_branch_push_failure_keeps_work_and_untouched_base(monkeypatch):
     assert ["merge", "--no-ff", "swarm/001-example-app-T2", "-m", "merge: swarm 001-example-app-T2 green"] not in flat
 
 
-def test_base_push_failure_rolls_back_merge(monkeypatch):
+def test_base_push_failure_rolls_back_merge(monkeypatch, app_contract):
     calls = _merge_git(monkeypatch, base_push_rc=1)
     rec = _commit_changes("001", "T2", "do things", paths=["app/x.py"])
     assert rec["ok"] == "0"
@@ -887,7 +887,7 @@ def _git_init_repo(repo):
     return remote, run
 
 
-def test_merge_mode_against_real_git(tmp_path, monkeypatch):
+def test_merge_mode_against_real_git(tmp_path, monkeypatch, app_contract):
     from swarm import flow
 
     repo = tmp_path / "repo"
@@ -910,7 +910,7 @@ def test_merge_mode_against_real_git(tmp_path, monkeypatch):
     assert run("status", "--porcelain").stdout.strip() == ""
 
 
-def test_commit_emits_done_ledger_trailers(monkeypatch):
+def test_commit_emits_done_ledger_trailers(monkeypatch, app_contract):
     calls = []
     monkeypatch.setenv("SWARM_MERGE_MODE", "direct")
     _fake_git(monkeypatch, ["app/x.py"], calls)
@@ -937,14 +937,14 @@ def test_save_run_records_done_ledger(tmp_path, monkeypatch):
     assert payload["done"]["task_hash"]
 
 
-def test_save_run_hold_records_delta_hashes(tmp_path, monkeypatch):
+def test_save_run_hold_records_delta_hashes(tmp_path, monkeypatch, app_contract):
     status, payload = _save_run_stub(tmp_path, monkeypatch, require=True)
     assert status == "awaiting_approval"
     assert payload["delta_hashes"] == {"app/x.py": "<missing>"}
     assert "head" in payload
 
 
-def test_commit_trailers_feed_the_done_ledger(tmp_path, monkeypatch):
+def test_commit_trailers_feed_the_done_ledger(tmp_path, monkeypatch, app_contract):
     import swarm.tools_guarded as tg
     from swarm import flow
     from swarm.done import done_entries
@@ -977,14 +977,15 @@ def test_commit_trailers_feed_the_done_ledger(tmp_path, monkeypatch):
     assert entry.source == "git"
 
 
-def test_gate_commands_are_config_driven():
-    from swarm.flow import DEFAULT_GATE_COMMANDS, gate_commands
+def test_gate_commands_are_config_driven(app_contract):
+    from swarm import contract
+    from swarm.flow import gate_commands
 
     assert gate_commands({"SWARM_GATE_COMMANDS": "pytest -q;npm run check"}) == [
         "pytest -q",
         "npm run check",
     ]
-    assert gate_commands({}) == list(DEFAULT_GATE_COMMANDS)
+    assert gate_commands({}) == list(contract.current().gates)
 
 
 def test_recover_prior_delta_requires_exact_match(tmp_path, monkeypatch):

@@ -7,17 +7,26 @@ import pytest
 from swarm import contract
 
 
-def test_the_defaults_reproduce_todays_behaviour():
-    from swarm import flow, tools_guarded
-
+def test_the_factory_defaults_are_generic():
+    """No `swarm.yaml` means the factory's own layout, never a neighbouring app."""
     c = contract.Contract()
     assert c.source == "defaults"
+    assert c.specs_dir == "specs/harness"
+    assert c.scope == ("src/", "tests/")
+    assert c.e2e == ""
+    assert c.db_script == ""
+    assert c.python_venv == ".venv"
+
+
+def test_the_app_contract_reproduces_the_old_tables(app_contract):
+    """A target repo declares its shape; the app's file mirrors the old tables."""
+    c = contract.current()
+    assert c.source.endswith("swarm.yaml")
     assert c.specs_dir == "specs/product"
-    assert c.scope == tuple(tools_guarded.DEFAULT_SCOPE)
-    assert c.harness_specs == tuple(flow.HARNESS_SPECS)
+    assert "app/" in c.scope and "frontend/" in c.scope
+    assert ("app/**", ("pytest -q", "ruff check .", "mypy app tests")) in c.gate_map
     assert c.e2e == "npm --prefix frontend run test:e2e"
     assert c.db_script == "swarm/db.sh"
-    assert c.python_venv == ".venv"
 
 
 def test_a_missing_file_is_the_defaults(tmp_path):

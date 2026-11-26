@@ -1,0 +1,15 @@
+specs_dir: specs/harness
+scope:
+  - src/
+  - tests/
+gates:
+  - pytest -q
+  - ruff check .
+e2e: ""
+risk:
+  profile: handleman-hq
+db:
+  script: ""
+python:
+  venv: .venv
+harness_specs: []
