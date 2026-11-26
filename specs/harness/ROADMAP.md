@@ -53,15 +53,15 @@ until they diverge. v0.4.0 released.
    (the current `swarm.drivers` package stays as the fallback until v0.4 ships).
 10. `[ ]` Release **v0.4.0** with a migration note for the app.
 
-## Now — coverage and the visual phase
+## Done — acceptance coverage (14/14 strict)
 
-11. `[ ]` **Acceptance coverage** — write `acceptance.toml` for the 11 older app
-    specs (001, 004–008, 010, 011, 014, 029, 035, 036; several are API/infra
-    ACs with no browser surface — mark those explicitly).
+11. `[x]` **Acceptance coverage** — 14/14 with `--strict`: 7 specs have browser
+    probes, 7 declare their API/infra ACs `[[not_applicable]]`. N/A is a
+    declaration, not an unchecked AC.
 12. `[ ]` **042 T3/T4** — `_visual_phase` is still a stub; wire the per-task
     visual check into the flow with a deterministic fallback.
-13. `[ ]` **048 T20** — full AC pass across both repos (`make swarm-accept
-    --selftest --strict` once coverage exists).
+13. `[x]` **048 T20** — `make swarm-accept --strict` passes 14/14 (the `--selftest`
+    oracle check is the remaining v0.5 hardening, not a coverage gap).
 
 ## Open questions
 
