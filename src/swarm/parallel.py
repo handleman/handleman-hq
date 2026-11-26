@@ -34,11 +34,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from swarm import prompts
-from swarm.bench import live
+from swarm import contract, prompts
+from swarm.drivers.bench import live
 from swarm.paths import REPO_ROOT
 
-INTEGRATION_SCOPE = ("app/", "frontend/", "tests/", "contracts/", "requirements", "pyproject.toml", ".gitignore")
+INTEGRATION_SCOPE = contract.DEFAULT_SCOPE + ("requirements", "pyproject.toml")
 
 
 @dataclass

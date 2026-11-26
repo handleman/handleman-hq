@@ -25,11 +25,11 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from swarm.bench import corpus
+from swarm.drivers.bench import corpus
 
 REPO_ROOT = corpus.REPO_ROOT
 COPY_IGNORE = {".venv", "venv", "__pycache__", "runs", ".mypy_cache", ".ruff_cache", ".pytest_cache",
-               "swarm.egg-info", "bench/corpus"}
+               "swarm.egg-info", "drivers/bench/corpus"}
 DEFAULT_TIMEOUT_SECONDS = 2400
 
 
@@ -122,7 +122,9 @@ def model_env(env: dict[str, str] | None = None) -> dict[str, str]:
 
 def copy_harness(repo: Path, destination: Path) -> list[str]:
     """Copy the current `swarm/` package into the worktree; return skipped paths."""
-    source = repo / "swarm"
+    source = repo / "src" / "swarm"
+    if not source.is_dir():
+        source = repo / "swarm"
     skipped: list[str] = []
     for dirpath, dirnames, filenames in os.walk(source):
         rel = Path(dirpath).relative_to(source)

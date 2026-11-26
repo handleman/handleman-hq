@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import swarm
-from swarm.bench import live
+from swarm.drivers.bench import live
 
 
 def _git(repo: Path, *args: str) -> tuple[int, str]:
@@ -54,11 +54,11 @@ def test_a_dirty_tree_is_refused_by_run_case(monkeypatch):
 def test_copy_harness_skips_runs_and_vendor(tmp_path: Path):
     repo = tmp_path / "repo"
     source = repo / "swarm"
-    (source / "bench" / "corpus").mkdir(parents=True)
+    (source / "drivers" / "bench" / "corpus").mkdir(parents=True)
     (source / "runs" / "20260101").mkdir(parents=True)
     (source / "__pycache__").mkdir()
     (source / "flow.py").write_text("x = 1\n")
-    (source / "bench" / "corpus" / "c.json").write_text("{}")
+    (source / "drivers" / "bench" / "corpus" / "c.json").write_text("{}")
     (source / "runs" / "20260101" / "run.json").write_text("{}")
 
     destination = tmp_path / "wt"
@@ -66,9 +66,9 @@ def test_copy_harness_skips_runs_and_vendor(tmp_path: Path):
 
     assert (destination / "swarm" / "flow.py").read_text() == "x = 1\n"
     assert not (destination / "swarm" / "runs").exists()
-    assert not (destination / "swarm" / "bench" / "corpus").exists()
+    assert not (destination / "swarm" / "drivers" / "bench" / "corpus").exists()
     assert not (destination / "swarm" / "__pycache__").exists()
-    assert "runs" in skipped and "bench/corpus" in skipped
+    assert "runs" in skipped and "drivers/bench/corpus" in skipped
 
 
 def test_link_venvs_reuses_the_repo_trees(tmp_path: Path):
@@ -106,7 +106,7 @@ def test_fill_from_dotenv_tolerates_a_missing_file(tmp_path: Path):
 
 def test_the_replay_disables_stash_hygiene(tmp_path: Path):
 
-    source = (Path(swarm.__file__).resolve().parent / "bench" / "live.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "drivers" / "bench" / "live.py").read_text()
     assert '"SWARM_STASH_UNRELATED"] = "0"' in source
 
 
@@ -139,7 +139,7 @@ def test_render_shows_the_measured_numbers():
 
 def test_live_replay_is_not_part_of_the_test_suite():
     """The CLI exists, but nothing runs a model unless asked explicitly."""
-    from swarm.bench.__main__ import main
+    from swarm.drivers.bench.__main__ import main
 
     assert main(["--live", "no-such-case"]) == 1
 
@@ -163,14 +163,14 @@ def test_a_killed_run_reports_its_last_phase(tmp_path: Path):
 
 
 def test_a_timeout_record_is_explicit():
-    source = (Path(swarm.__file__).resolve().parent / "bench" / "live.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "drivers" / "bench" / "live.py").read_text()
     assert '"status": "timeout"' in source
     assert '"last_phase": last.get("phase", "")' in source
 
 
 def test_the_replay_child_writes_to_files_not_pipes():
     """A leaked gate process must not be able to block the replay on a pipe."""
-    source = (Path(swarm.__file__).resolve().parent / "bench" / "live.py").read_text()
+    source = (Path(swarm.__file__).resolve().parent / "drivers" / "bench" / "live.py").read_text()
     assert "stdout=out_f" in source and "stderr=err_f" in source
     assert "capture_output=True" not in source
     # the logs must not live inside the worktree (scope gate)

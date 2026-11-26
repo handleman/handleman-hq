@@ -98,7 +98,7 @@ def coder_role(task: SpecTask) -> str:
     if any(
         k in text
         for k in (
-            "frontend/",
+            "frontend",
             "ui/",
             "component",
             "react",
@@ -656,7 +656,8 @@ def e2e_gate_note(brief: str) -> str:
     unchanged. Without this line the QA role had no way to produce the
     execution that `e2e_missing` demands — the guard could only fire.
     """
-    from swarm import e2e, evidence
+    from swarm import evidence
+    from swarm.drivers import e2e
 
     if not (evidence.e2e_enabled() and evidence.e2e_required(brief)):
         return ""

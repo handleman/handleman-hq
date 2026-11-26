@@ -41,19 +41,17 @@ _STARTER = """\
 # swarm.yaml — what the harness needs to know about this repo (048 AC-4).
 specs_dir: specs/product
 scope:
-  - app/
-  - frontend/
+  - src/
   - tests/
-  - contracts/
 gates:
   - pytest -q
   - ruff check .
 e2e:
-  command: npm --prefix frontend run test:e2e
+  command: npm run test:e2e
 risk:
-  profile: comfort-walking-router
+  profile: my-app
 db:
-  script: swarm/db.sh
+  script: scripts/db.sh
 python:
   venv: .venv
 """
@@ -107,7 +105,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "report":
         return _forward("swarm.report", args.rest, target=target)
     if args.command == "bench":
-        return _forward("swarm.bench", args.rest, target=target)
+        return _forward("swarm.drivers.bench", args.rest, target=target)
     script = target / "swarm" / f"{args.command}.sh"
     if not script.is_file():
         print(

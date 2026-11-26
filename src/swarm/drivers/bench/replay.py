@@ -12,7 +12,7 @@ suite is opt-in (models required) and never part of `make swarm-test`.
     make swarm-replay                 # selected cases, compare to the baseline
     make swarm-replay-off             # same cases with every 021 knob at its 020 value
     make swarm-replay-one CASE=<id>   # one case, details printed
-    python -m swarm.bench.replay --baseline   # snapshot the first run
+    python -m swarm.drivers.bench.replay --baseline   # snapshot the first run
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ import statistics
 from pathlib import Path
 from typing import Any
 
-from swarm.bench import corpus, live
+from swarm.drivers.bench import corpus, live
 
 REPO_ROOT = corpus.REPO_ROOT
 BASELINE = Path(__file__).resolve().parent / "replay_baseline.json"
@@ -220,7 +220,7 @@ def write_baseline(path: Path, suite: dict[str, Any], repo: Path = REPO_ROOT) ->
 def main(argv: list[str] | None = None) -> int:
     import argparse
 
-    parser = argparse.ArgumentParser(prog="swarm.bench.replay", description="outcome replay suite")
+    parser = argparse.ArgumentParser(prog="swarm.drivers.bench.replay", description="outcome replay suite")
     parser.add_argument("--repo", default=str(REPO_ROOT))
     parser.add_argument("--case", default="", help="run one case")
     parser.add_argument("--cases", default="", help="comma-separated case ids")

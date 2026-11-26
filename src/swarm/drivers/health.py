@@ -66,7 +66,7 @@ def check() -> list[str]:
     else:
         problems.append(f"app venv missing: {app_python} (run `make dev-setup`)")
     if swarm_python.exists():
-        problem = _run([str(swarm_python), "-m", "swarm.e2e"], label="e2e suite")
+        problem = _run([str(swarm_python), "-m", "swarm.drivers.e2e"], label="e2e suite")
         if problem:
             problems.append(problem)
     else:

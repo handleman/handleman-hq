@@ -274,7 +274,7 @@ def _fake_playwright(tmp_path, location: Path) -> Path:
 def test_missing_browser_binaries_fail_preflight(tmp_path):
     """026 AC-8: `npm install` does not download Chromium; a run would fail late."""
     _fake_playwright(tmp_path, tmp_path / "no-such-browsers" / "chromium-1")
-    from swarm import e2e as e2e_suite
+    from swarm.drivers import e2e as e2e_suite
 
     problems = e2e_suite.browsers(tmp_path)
     assert len(problems) == 1
@@ -285,7 +285,7 @@ def test_installed_browser_binaries_pass(tmp_path):
     installed = tmp_path / "ms-playwright" / "chromium-1"
     installed.mkdir(parents=True)
     _fake_playwright(tmp_path, installed)
-    from swarm import e2e as e2e_suite
+    from swarm.drivers import e2e as e2e_suite
 
     assert e2e_suite.browsers(tmp_path) == []
 
@@ -308,7 +308,7 @@ def test_partially_installed_browsers_fail_preflight(tmp_path):
         f"echo '  Install location:    {absent}'\n"
     )
     binary.chmod(0o755)
-    from swarm import e2e as e2e_suite
+    from swarm.drivers import e2e as e2e_suite
 
     problems = e2e_suite.browsers(tmp_path)
     assert len(problems) == 1
@@ -318,7 +318,7 @@ def test_partially_installed_browsers_fail_preflight(tmp_path):
 
 def test_no_playwright_binary_is_reported_once(tmp_path):
     """The missing binary is `available`'s problem, not two problems."""
-    from swarm import e2e as e2e_suite
+    from swarm.drivers import e2e as e2e_suite
 
     problems = e2e_suite.available(tmp_path)
     assert any("playwright is missing" in p for p in problems)

@@ -199,8 +199,8 @@ def task_allowlist(brief: str, steps: Iterable[str] = ()) -> set[str]:
     Derived from the brief's *ownership* paths (+ the plan's step targets) and
     their parent directories, so a coder can add a sibling file but not wander
     into another area. On 2026-11-25 T23's coder edited
-    `frontend/e2e/helpers.ts`, which flipped `e2e_required` on a map task and
-    made a green map unreachable; the global scope (`frontend/`) was too coarse
+    `src/e2e/helpers.ts`, which flipped `e2e_required` on a map task and
+    made a green map unreachable; the global scope (the app tree) was too coarse
     to catch it.
     """
     from swarm import evidence as _ev

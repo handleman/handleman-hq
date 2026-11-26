@@ -113,7 +113,7 @@ class SwarmState(BaseModel):
     quota: dict[str, Any] = {}
     # 026 AC-7: what a dollar cap could not see because a model had no price.
     cost_note: str = ""
-    # 026 AC-8: e2e evidence for a brief that names `frontend/e2e/*`.
+    # 026 AC-8: e2e evidence for a brief that names `the e2e tree`.
     e2e: dict[str, Any] = {}
     # 027: triage + inner roster of a red e2e suite (class, failed, rounds, stop).
     e2e_self_heal: dict[str, Any] = {}
@@ -3217,7 +3217,7 @@ class SwarmFlow(Flow[SwarmState]):
         # to them (coder or repair crew) can be checked for weakening.
         self._e2e_baseline: dict[str, Any] = {}
         try:
-            from swarm import e2e_guard as _guard
+            from swarm.drivers import e2e_guard as _guard
 
             if os.getenv("SWARM_E2E_SELF_HEAL", "1") != "0":
                 self._e2e_baseline = _guard.facts_for(REPO_ROOT, _guard.e2e_files(REPO_ROOT))
@@ -3985,7 +3985,7 @@ class SwarmFlow(Flow[SwarmState]):
             return {}
 
         changed = list(getattr(self.state, "changed_files", []) or [])
-        # 053 AC-3: a stray `frontend/e2e/` write on a map task must not impose
+        # 053 AC-3: a stray the e2e tree write on a map task must not impose
         # an e2e run on it; only the task's own allowlist decides.
         if os.getenv("SWARM_TASK_ALLOWLIST", "1") != "0":
             from swarm.guards import allowlist_violations
@@ -4018,7 +4018,9 @@ class SwarmFlow(Flow[SwarmState]):
         elif record:
             note = "the recorded Playwright execution did not pass"
         else:
-            note = "brief names frontend/e2e/* but no Playwright execution was recorded"
+            note = (
+                "brief names a browser spec but no Playwright execution was recorded"
+            )
         self.state.e2e = {
             "required": True,
             "recorded": False,
@@ -4036,7 +4038,7 @@ class SwarmFlow(Flow[SwarmState]):
         coder, not the phase). Weakening is weakening, so the check runs on any
         run whose delta touches the e2e tree.
         """
-        from swarm import e2e_guard
+        from swarm.drivers import e2e_guard
 
         result: dict[str, Any] = {"weakened": [], "reverted": []}
         baseline = getattr(self, "_e2e_baseline", None) or {}
@@ -4045,7 +4047,7 @@ class SwarmFlow(Flow[SwarmState]):
         changed = [
             path
             for path in (getattr(self.state, "changed_files", None) or [])
-            if str(path).startswith("frontend/e2e/")
+            if str(path).startswith(contract.current().e2e_prefix() + "/")
         ]
         if not changed:
             return result
@@ -4078,8 +4080,8 @@ class SwarmFlow(Flow[SwarmState]):
         """
         import time as _time
 
-        from swarm import e2e as _e2e
         from swarm import evidence as _evidence
+        from swarm.drivers import e2e as _e2e
 
         argv = ["npm", "--prefix", "frontend", "run", "test:e2e"]
         if specs:
@@ -4130,8 +4132,9 @@ class SwarmFlow(Flow[SwarmState]):
         `run.json.e2e_self_heal.stop` as the reason. Never raises: this runs on
         the way to a status decision.
         """
-        from swarm import e2e, e2e_guard, e2e_triage, evidence, inner
+        from swarm import evidence, inner
         from swarm.crew import build_fix_crew
+        from swarm.drivers import e2e, e2e_guard, e2e_triage
         from swarm.spec_loader import load_spec_tasks
         from swarm.tools_guarded import run_delta
 
@@ -4215,7 +4218,7 @@ class SwarmFlow(Flow[SwarmState]):
             max_tasks=limit,
         )
         state["roster"] = roster.as_dict()
-        specs = sorted({f"frontend/{f.file}" for f in classified})
+        specs = sorted({contract.current().e2e_repo_path(f.file) for f in classified})
         roster_text = (roster.directory / "tasks.md").read_text()
         try:
             rounds = int(os.getenv("SWARM_MAX_INNER_ROUNDS", "2"))
@@ -4287,7 +4290,7 @@ class SwarmFlow(Flow[SwarmState]):
             # 027 AC-5: a weakened spec is never green, whoever edited it.
             self.state.status = "needs_human"
         elif self._e2e_state().get("required") and not self.state.e2e.get("recorded"):
-            # 026 AC-8: a task whose brief names frontend/e2e/* needs a recorded
+            # 026 AC-8: a task whose brief names the e2e tree needs a recorded
             # passing run. 010-T4 was green without the suite ever executing.
             # 027: a red suite is triaged and repaired first (typed stops only).
             if not (getattr(self, "_e2e_self_heal", None) and self._e2e_self_heal()):
@@ -4535,7 +4538,7 @@ class SwarmFlow(Flow[SwarmState]):
                     # that just went green. Failing ACs queue fix tasks; verdict recorded.
                     if os.getenv("SWARM_ACCEPT", "1") != "0":
                         try:
-                            from swarm.acceptance import run as run_acceptance
+                            from swarm.drivers.acceptance import run as run_acceptance
                             acceptance_result = run_acceptance(
                                 specs=[self.state.spec_dir],
                                 queue=True,

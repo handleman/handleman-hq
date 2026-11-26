@@ -27,8 +27,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-BENCH_DIR = REPO_ROOT / "swarm" / "bench"
+from swarm.paths import REPO_ROOT
+
+BENCH_DIR = Path(__file__).resolve().parent
 CORPUS_DIR = BENCH_DIR / "corpus"
 
 SCHEMA = 1
@@ -434,7 +435,7 @@ def select(
 
 def write_corpus(repo: Path, cases: list[dict[str, Any]]) -> list[Path]:
     """Write one JSON per case; the corpus is committed, not generated at test time."""
-    out_dir = repo / "swarm" / "bench" / "corpus"
+    out_dir = repo / "swarm" / "drivers" / "bench" / "corpus"
     out_dir.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
     keep = {f"{case['id']}.json" for case in cases}
@@ -449,7 +450,7 @@ def write_corpus(repo: Path, cases: list[dict[str, Any]]) -> list[Path]:
 
 
 def load_corpus(repo: Path) -> list[dict[str, Any]]:
-    out_dir = repo / "swarm" / "bench" / "corpus"
+    out_dir = repo / "swarm" / "drivers" / "bench" / "corpus"
     cases: list[dict[str, Any]] = []
     for path in sorted(out_dir.glob("*.json")):
         try:

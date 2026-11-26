@@ -226,7 +226,7 @@ def main(argv: list[str] | None = None) -> int:
     max_rounds = int(os.getenv("SWARM_SUPERVISE_ROUNDS", "20"))
     max_attempts = int(os.getenv("SWARM_SUPERVISE_ATTEMPTS", "3"))
     if os.getenv("SWARM_ACCEPT_QUEUE", "1") != "0":
-        from swarm.acceptance import run as run_acceptance
+        from swarm.drivers.acceptance import run as run_acceptance
 
         def accept() -> int:
             return run_acceptance(queue=True, build=True, log=print)

@@ -347,8 +347,8 @@ def connections(root: Path, paths: Iterable[str]) -> dict[str, dict[str, list[st
 
     A missing edge is a hint, not a proof: a dynamic import or a path alias
     will not appear here. It is what makes a duplicate implementation visible
-    (007-T9 wrote `frontend/src/lib/navigation/walkMode.ts` next to the real
-    `frontend/src/lib/walkMode.ts`) and a contract drift worth a second look.
+    (007-T9 wrote `src/lib/navigation/walkMode.ts` next to the real
+    `src/lib/walkMode.ts`) and a contract drift worth a second look.
     """
     root = Path(root)
     targets = sorted({str(p) for p in paths if p})

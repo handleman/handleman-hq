@@ -113,7 +113,7 @@ def test_flow_state_and_payload_carry_the_selection_record():
 
 
 def test_bench_counts_the_selected_gates_per_round(app_contract):
-    from swarm.bench import score
+    from swarm.drivers.bench import score
 
     case = {
         "id": "x",

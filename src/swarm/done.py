@@ -3,7 +3,7 @@
 The swarm never edits `specs/`, so a green task can stay `- [ ]`. Completion is
 recorded in git commit trailers instead:
 
-    Swarm-Task: 001-example-app/T3
+    Swarm-Task: 001-example/T3
     Swarm-Task-Hash: <sha256 of task id+brief+ACs>
     Swarm-Spec-Hash: <sha256 of spec.md+plan.md>
     Swarm-Run: <run dir name>

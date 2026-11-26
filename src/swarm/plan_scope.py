@@ -1,7 +1,7 @@
 """Keep a plan inside its task (024/021 follow-up).
 
-`004-weather-sun-T2` is "auto-rule in `app/preferences.py`". Its planner produced
-six steps that also edited `app/main.py` and `contracts/route.json` — files the
+`004-weather-sun-T2` is "auto-rule in `src/preferences.py`". Its planner produced
+six steps that also edited `src/main.py` and `schema.json` — files the
 *next* task's brief owns — and the verifier then blocked on defects in that extra
 scope. The coder did nothing wrong; the plan had another task in it.
 

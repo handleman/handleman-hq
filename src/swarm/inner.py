@@ -11,7 +11,7 @@ writes a small SDD trio **inside the run dir** —
 run could grade its own homework). The tasks parse with the real
 `spec_loader.parse_tasks_md`, so the roster is the same shape the planner and
 coder crews already understand, and the scope is decided by class: a `drift`
-repair may only touch `frontend/e2e/**` (and its fixtures), a `coverage` repair
+repair may only touch `the e2e tree*` (and its fixtures), a `coverage` repair
 writes a new spec there, and an `impl` failure is *not* a roster task — it goes
 back to the normal code fix loop.
 """
@@ -21,11 +21,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from swarm.e2e_triage import FailedTest
+from swarm.drivers.e2e_triage import FailedTest
 from swarm.spec_loader import SpecTask, parse_tasks_md
 
 INNER_DIR = "inner"
-E2E_SCOPE = ("frontend/e2e/",)
+from swarm import contract
+
+E2E_SCOPE = ("e2e/",)  # generic default; the contract prefix wins
 MAX_TASKS = 12  # 053 AC-5: a stale-suite migration has ~11 failures
 SPEC_TEXT = """# Inner roster — e2e repair ({spec_id}/{task_id})
 
@@ -84,7 +86,7 @@ class Roster:
 def scope_for(cls: str, outer_scope: tuple[str, ...]) -> tuple[str, ...]:
     """Allowed paths for one class: repairs stay in the e2e tree (AC-4)."""
     if cls in ("drift", "coverage"):
-        return E2E_SCOPE
+        return (contract.current().e2e_prefix() + "/",)
     return outer_scope
 
 
@@ -92,12 +94,12 @@ def _task_brief(index: int, fail: FailedTest) -> str:
     where = f"{fail.file}:{fail.line}"
     if fail.cls == "coverage":
         return (
-            f"Write the missing e2e scenario in `frontend/e2e/{fail.file.removeprefix('e2e/')}` "
+            f"Write the missing e2e scenario in `{contract.current().e2e_prefix()}/{fail.file.removeprefix('e2e/')}` "
             f"(test {index}: {fail.title or 'the scenario the brief names'}): assert what the "
             "user does and sees, following the suite's existing helpers. Change no product code."
         )
     return (
-        f"Repair the stale locator/fixture in `frontend/e2e/{fail.file.removeprefix('e2e/')}` at "
+        f"Repair the stale locator/fixture in `{contract.current().e2e_prefix()}/{fail.file.removeprefix('e2e/')}` at "
         f"{where} (test: {fail.title or 'unnamed'}): the element exists but the spec addresses "
         "it wrongly. Keep the assertion and its intent — do not delete, skip or weaken a check, "
         "and change no product code."

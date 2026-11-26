@@ -80,7 +80,7 @@ def read_executions(log_path: Path) -> list[dict[str, Any]]:
 def e2e_executions(executions: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     """Recorded Playwright runs (026 AC-8).
 
-    A task whose brief names `frontend/e2e/*` must show that the suite actually
+    A task whose brief names `the e2e tree` must show that the suite actually
     ran. 010-T4 was green having touched only `helpers.ts`: the harness had
     never executed Playwright, and four setup bugs plus NYC-only fixtures were
     invisible to every gate.
@@ -129,7 +129,7 @@ def e2e_recorded(
     }
 
 
-# A brief that only *reads* an e2e helper ("Read `frontend/e2e/helpers.ts`")
+# A brief that only *reads* an e2e helper ("Read `src/e2e/helpers.ts`")
 # documents the suite; it does not write it (030-T2, 2026-11-16). These verbs
 # mark a reference clause.
 _READ_VERBS = frozenset(
@@ -142,24 +142,30 @@ _READ_VERBS = frozenset(
         "use", "using", "from", "via", "import", "reuse", "reusing", "exists",
     }
 )
-_E2E_PATH_RE = re.compile(r"frontend/e2e/[\w./-]+")
+def _e2e_path_re() -> re.Pattern[str]:
+    from swarm import contract
+
+    return re.compile(re.escape(contract.current().e2e_prefix()) + r"/[\w./-]+")
 _CLAUSE_RE = re.compile(r"[.;\n]")
 
 
 def e2e_required(brief: str, changed: Iterable[str] = ()) -> bool:
-    """True when this task owns a `frontend/e2e/` file (026 AC-8).
+    """True when this task owns a the e2e tree file (026 AC-8).
 
     The delta is authoritative: a task that actually touched an e2e file needs a
     recorded run (010-T4). The brief is the planning-time proxy: an e2e path
     counts unless the clause naming it is a *reference* — "Read
-    `frontend/e2e/helpers.ts`" documents the suite, it does not write it, and
+    `src/e2e/helpers.ts`" documents the suite, it does not write it, and
     030-T2 stopped `e2e_unclassified` on 2026-11-16 because the old check read
     the mention instead of the ownership.
     """
-    if "frontend/e2e/" in " ".join(str(path) for path in changed).replace("\\", "/"):
+    from swarm import contract
+
+    prefix = contract.current().e2e_prefix()
+    if prefix + "/" in " ".join(str(path) for path in changed).replace("\\", "/"):
         return True
     text = (brief or "").replace("\\", "/")
-    for match in _E2E_PATH_RE.finditer(text):
+    for match in _e2e_path_re().finditer(text):
         clause = _CLAUSE_RE.split(text[: match.start()])[-1].lower()
         if not (_READ_VERBS & set(re.findall(r"[a-z]+", clause))):
             return True
@@ -367,7 +373,7 @@ def _short_path(path: str) -> str:
 
 
 # 021: ruff prints `RULE message` and puts the location on the *next* line
-# (`  --> app/scoring.py:43:5`). Without pairing them the coder gets a rule code
+# (`  --> src/scoring.py:43:5`). Without pairing them the coder gets a rule code
 # and no file, which cost six fix rounds on 006-T3.
 _RUFF_HEADER_RE = re.compile(r"^([A-Z]{1,3}\d{3,4})\s+(.+)$")
 _RUFF_ARROW_RE = re.compile(r"^\s*-->\s+([\w./-]+):(\d+):(\d+)")

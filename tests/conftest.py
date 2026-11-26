@@ -81,6 +81,10 @@ scope:
   - requirements.txt
   - pyproject.toml
   - .gitignore
+frontend_dirs: [app/, frontend/src/, frontend/lib/, frontend/]
+e2e_root: frontend
+e2e_dir: e2e
+lock_dir: frontend
 gates:
   - pytest -q
   - ruff check .

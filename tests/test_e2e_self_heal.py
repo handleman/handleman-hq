@@ -6,7 +6,16 @@ import json
 import types
 from pathlib import Path
 
-from swarm import e2e_guard, e2e_triage, inner
+import pytest
+
+from swarm import contract, inner
+from swarm.drivers import e2e_guard, e2e_triage
+
+
+@pytest.fixture(autouse=True)
+def _app(app_contract):
+    """These briefs and expectations describe an app's frontend/e2e tree."""
+    return app_contract
 
 BAD_TAIL = """Running 4 tests using 4 workers
 
@@ -114,8 +123,8 @@ def test_more_failures_than_the_budget_is_a_typed_stop(tmp_path: Path):
 
 
 def test_a_repair_scope_stays_in_the_e2e_tree():
-    assert inner.scope_for("drift", ("app/",)) == ("frontend/e2e/",)
-    assert inner.scope_for("coverage", ("app/",)) == ("frontend/e2e/",)
+    assert inner.scope_for("drift", ("app/",)) == (contract.current().e2e_prefix() + "/",)
+    assert inner.scope_for("coverage", ("app/",)) == (contract.current().e2e_prefix() + "/",)
     assert inner.scope_for("impl", ("app/",)) == ("app/",)
 
 
@@ -353,7 +362,7 @@ def test_a_repair_that_makes_the_suite_pass_heals_the_run(tmp_path, monkeypatch)
 
 
 def _weakening_stub(tmp_path: Path) -> types.SimpleNamespace:
-    from swarm import e2e_guard
+    from swarm.drivers import e2e_guard
     from swarm.flow import SwarmFlow
 
     spec = tmp_path / "frontend" / "e2e" / "walk.spec.ts"

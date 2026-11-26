@@ -26,7 +26,7 @@ def test_is_test_path_covers_the_layouts_this_repo_uses():
     assert not tests_first.is_test_path("frontend/src/lib/contest.ts")
 
 
-def test_command_for_picks_the_project_gate_for_the_area():
+def test_command_for_picks_the_project_gate_for_the_area(app_contract):
     gates = ["pytest -q", "ruff check .", "npm --prefix frontend test -- --run"]
     assert tests_first.command_for(["tests/test_x.py"], gates) == "pytest -q"
     assert (

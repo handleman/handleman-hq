@@ -18,7 +18,7 @@ import json
 import sys
 from pathlib import Path
 
-from swarm.bench import corpus, score
+from swarm.drivers.bench import corpus, score
 
 BENCH_DIR = Path(__file__).resolve().parent
 BASELINE = BENCH_DIR / "baseline.json"
@@ -43,7 +43,7 @@ def build(repo: Path) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="swarm.bench", description="offline replay bench")
+    parser = argparse.ArgumentParser(prog="swarm.drivers.bench", description="offline replay bench")
     parser.add_argument("--repo", default=str(corpus.REPO_ROOT), help="repository root")
     parser.add_argument("--build", action="store_true", help="rebuild the corpus from git history")
     parser.add_argument("--update-baseline", action="store_true", help="snapshot the current score")
@@ -63,7 +63,7 @@ def main(argv: list[str] | None = None) -> int:
         return build(repo)
 
     if args.live:
-        from swarm.bench import live
+        from swarm.drivers.bench import live
 
         result = live.run_case(args.live, repo=repo)
         print(live.render(result))

@@ -713,7 +713,7 @@ def _valid_npm(argv: list[str]) -> bool:
         return argv[4:] == ["--", "--run"]
     if argv[3:4] == ["exec"]:
         # Refused on purpose: `exec` keeps the caller's cwd, so Playwright would
-        # miss frontend/playwright.config.ts (2026-11-15). Use the npm script.
+        # miss e2e/playwright.config.ts (2026-11-15). Use the npm script.
         return False
     if argv[3:4] in (["install"], ["ci"], ["add"], ["i"]):
         # 037: the coder may install frontend dependencies (Svelte 5, Tailwind,

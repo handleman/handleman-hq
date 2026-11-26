@@ -128,7 +128,8 @@ def _triage_chars(case: dict[str, Any]) -> dict[str, int]:
     import tempfile
     from pathlib import Path as _Path
 
-    from swarm import e2e_triage, inner
+    from swarm import inner
+    from swarm.drivers import e2e_triage
 
     changed = [str(path) for path in (case.get("changed") or [])]
     spec_file = next(
@@ -191,7 +192,7 @@ def _verify_context(case: dict[str, Any]) -> str:
 
 def report_fixture(case: dict[str, Any]) -> dict[str, Any]:
     """The QA report object for the frozen failing round."""
-    from swarm.bench.corpus import failing_gate
+    from swarm.drivers.bench.corpus import failing_gate
     from swarm.evidence import qa_report, split_tails
 
     failing = failing_gate(case)
@@ -269,7 +270,7 @@ def score(cases: list[dict[str, Any]]) -> dict[str, Any]:
     if rows:
         totals["mean_task_prompt_chars"] = totals["task_prompt_chars"] // len(rows)
         totals["mean_report_chars"] = totals["report_chars"] // len(rows)
-    from swarm.bench.corpus import corpus_digest
+    from swarm.drivers.bench.corpus import corpus_digest
 
     return {"cases": {r["id"]: r for r in rows}, "totals": totals, "corpus_digest": corpus_digest(cases)}
 

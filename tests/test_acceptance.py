@@ -6,7 +6,7 @@ browser pass is not unit-tested (it needs Chromium); the pure functions are.
 
 from __future__ import annotations
 
-from swarm.acceptance import (
+from swarm.drivers.acceptance import (
     AcceptanceRun,
     Check,
     Criterion,
@@ -291,7 +291,7 @@ def test_browser_plan_builds_check_list(tmp_path):
 
 def test_run_returns_unverified_when_no_specs(tmp_path, monkeypatch):
     monkeypatch.setenv("SWARM_ACCEPT_VISION", "0")
-    monkeypatch.setattr("swarm.acceptance.built_product_specs", lambda repo: [])
+    monkeypatch.setattr("swarm.drivers.acceptance.built_product_specs", lambda repo: [])
     result = run(repo=tmp_path, queue=False, build=False, base_url="http://x/")
     assert result.verdict == "UNVERIFIED"
     assert len(result.reports) == 0
@@ -309,9 +309,9 @@ kind = "exists"
 selector = "#x"
 """)
 
-    monkeypatch.setattr("swarm.acceptance.built_product_specs", lambda repo: [spec_dir])
+    monkeypatch.setattr("swarm.drivers.acceptance.built_product_specs", lambda repo: [spec_dir])
     monkeypatch.setattr(
-        "swarm.acceptance.judge_vision",
+        "swarm.drivers.acceptance.judge_vision",
         lambda report: {"AC-1": {"verdict": "pass", "note": "saw it"}},
     )
 
@@ -322,7 +322,7 @@ selector = "#x"
             "checks": [{"spec": "043-test", "ac": "AC-1", "ok": True, "detail": "exists"}],
         }
 
-    monkeypatch.setattr("swarm.acceptance.run_browser", fake_browser)
+    monkeypatch.setattr("swarm.drivers.acceptance.run_browser", fake_browser)
     result = run(repo=tmp_path, queue=False, build=False, base_url="http://x/", browser_runner=fake_browser)
     assert result.verdict == "PASS"
     assert len(result.reports) == 1
@@ -335,9 +335,9 @@ def test_run_vision_called_for_no_probe(tmp_path, monkeypatch):
     (spec_dir / "spec.md").write_text("- **AC-1 — Looks fine.** Screenshot shows map.\n")
     (spec_dir / "tasks.md").write_text("- [x] T1: built\n")
 
-    monkeypatch.setattr("swarm.acceptance.built_product_specs", lambda repo: [spec_dir])
+    monkeypatch.setattr("swarm.drivers.acceptance.built_product_specs", lambda repo: [spec_dir])
     monkeypatch.setattr(
-        "swarm.acceptance.judge_vision",
+        "swarm.drivers.acceptance.judge_vision",
         lambda report: {"AC-1": {"verdict": "fail", "note": "blank map"}},
     )
 
@@ -368,14 +368,14 @@ def test_acceptance_run_exit_code():
 
 def test_main_disabled(monkeypatch):
     monkeypatch.setenv("SWARM_ACCEPT", "0")
-    from swarm.acceptance import main
+    from swarm.drivers.acceptance import main
     assert main([]) == 0
 
 
 def test_main_returns_exit_code(monkeypatch):
     monkeypatch.setenv("SWARM_ACCEPT", "1")
     monkeypatch.setenv("SWARM_ACCEPT_VISION", "0")
-    from swarm.acceptance import main
+    from swarm.drivers.acceptance import main
     # No specs built → UNVERIFIED, exit 0
     result = main(["--spec", "999-no-such-spec"])
     assert result == 0
@@ -386,7 +386,7 @@ def test_main_returns_exit_code(monkeypatch):
 
 
 def test_should_commit_switch():
-    from swarm.acceptance import COMMIT_ENV, _should_commit
+    from swarm.drivers.acceptance import COMMIT_ENV, _should_commit
 
     assert _should_commit(None, {}) is True
     assert _should_commit(True, {}) is True
@@ -431,7 +431,7 @@ def _committed_names(root):
 
 
 def test_commit_artifacts_commits_only_the_given_paths(tmp_path):
-    from swarm.acceptance import _commit_artifacts
+    from swarm.drivers.acceptance import _commit_artifacts
 
     root = _git_repo(tmp_path)
     (root / "specs").mkdir()
@@ -451,7 +451,7 @@ def test_commit_artifacts_commits_only_the_given_paths(tmp_path):
 
 
 def test_commit_artifacts_makes_no_empty_commit(tmp_path):
-    from swarm.acceptance import _commit_artifacts
+    from swarm.drivers.acceptance import _commit_artifacts
 
     root = _git_repo(tmp_path)
     artifact = root / "acceptance.md"
@@ -465,7 +465,7 @@ def test_commit_artifacts_makes_no_empty_commit(tmp_path):
 
 
 def test_commit_artifacts_ignores_paths_outside_the_repo(tmp_path):
-    from swarm.acceptance import _commit_artifacts
+    from swarm.drivers.acceptance import _commit_artifacts
 
     repo = tmp_path / "repo"
     repo.mkdir()

@@ -15,7 +15,7 @@ pytestmark = [
     ),
 ]
 
-from swarm import corridor_check
+from swarm.drivers import corridor_check
 
 
 def test_probe_reports_the_serving_mirror():

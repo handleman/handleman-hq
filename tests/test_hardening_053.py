@@ -189,20 +189,20 @@ def test_a_stray_e2e_write_does_not_make_a_map_task_an_e2e_task(tmp_path, monkey
 
 
 def test_a_spawn_failure_is_a_launch_error():
-    from swarm import e2e_triage
+    from swarm.drivers import e2e_triage
 
     error = e2e_triage.launch_error({"tail": "Error: spawn /bin/sh ENOENT"})
     assert error and "ENOENT" in error
 
 
 def test_a_red_suite_with_failures_is_not_a_launch_error():
-    from swarm import e2e_triage
+    from swarm.drivers import e2e_triage
 
     assert e2e_triage.launch_error({"tail": "1 failed\n  ✘ 1 walk-mode.spec.ts:3:1"}) == ""
 
 
 def test_no_failures_and_no_launch_error_stays_unclassified():
-    from swarm import e2e_triage
+    from swarm.drivers import e2e_triage
 
     assert e2e_triage.launch_error({"tail": ""}) == ""
     assert e2e_triage.launch_error(None) == ""
@@ -219,7 +219,7 @@ def test_the_inner_task_cap_allows_a_stale_suite_migration():
 
 
 def test_swarm_health_reports_ok(monkeypatch, tmp_path):
-    from swarm import health
+    from swarm.drivers import health
 
     calls: list[str] = []
 
@@ -239,7 +239,7 @@ def test_swarm_health_reports_ok(monkeypatch, tmp_path):
 
 
 def test_swarm_health_fails_loudly(monkeypatch, tmp_path):
-    from swarm import health
+    from swarm.drivers import health
 
     monkeypatch.setattr(health, "_run", lambda argv, label: f"{label}: exit 1\nboom")
     monkeypatch.setattr(health, "REPO_ROOT", tmp_path)
@@ -254,7 +254,7 @@ def test_swarm_health_fails_loudly(monkeypatch, tmp_path):
 
 
 def test_the_health_tail_keeps_the_suite_summary_not_server_noise():
-    from swarm import health
+    from swarm.drivers import health
 
     log = (
         "[WebServer] INFO:     Uvicorn running on http://127.0.0.1:8000\n"

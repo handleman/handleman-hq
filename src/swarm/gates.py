@@ -16,8 +16,8 @@ to run; evidence and green are still derived from the recorded executions.
 
 Mapping syntax (`SWARM_GATE_MAP`, newline separated):
 
-    app/**=pytest -q;ruff check .;mypy app tests
-    frontend/**=npm --prefix frontend run check;npm --prefix frontend run lint
+    src/**=pytest -q;ruff check .;mypy app tests
+    frontend (type-checked) **=npm --prefix frontend run check;npm --prefix frontend run lint
 
 `SWARM_GATE_SELECT=0` disables selection (always the full suite).
 """

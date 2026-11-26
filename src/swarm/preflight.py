@@ -429,10 +429,10 @@ def check(
         if not which(binary, path=path_env):
             problems.append(Problem("gates", f"`{binary}` not found in the project venvs"))
 
-    # 4. Browser e2e: a task whose brief names frontend/e2e/* needs a runnable
+    # 4. Browser e2e: a task whose brief names an e2e spec needs a runnable
     #    suite (026 AC-8). Cheap: file existence, no browser launch.
     if (REPO_ROOT / "frontend" / "e2e").is_dir():
-        from swarm import e2e as e2e_suite
+        from swarm.drivers import e2e as e2e_suite
 
         for problem in e2e_suite.available(REPO_ROOT):
             problems.append(Problem("e2e", problem))
@@ -463,14 +463,20 @@ def spec_kind_notes(repo_root: Path | None = None) -> list[str]:
 
 
 def frontend_lock_problem(repo_root: Path | None = None) -> list[Problem]:
-    """frontend/package-lock.json must be in sync with package.json (041 deploy).
+    """The JS lockfile must be in sync with its package.json (041 deploy).
 
-    `npm ci` in the Docker build is strict: a stale lock (deps added without
-    regenerating it) fails the Render deploy. Catch it here with `npm ci
-    --dry-run` so a green run can never ship a lock that won't build.
+    `npm ci` in a deploy build is strict: a stale lock (deps added without
+    regenerating it) fails the build. Catch it here with `npm ci --dry-run` so a
+    green run can never ship a lock that won't build. The directory is declared
+    by the target's `swarm.yaml` (`lock_dir`); no declaration, no check.
     """
+    from swarm import contract as _contract
+
     root = Path(repo_root or REPO_ROOT)
-    frontend = root / "frontend"
+    lock_dir = _contract.current().lock_dir
+    if not lock_dir:
+        return []
+    frontend = root / lock_dir
     if not (frontend / "package.json").is_file():
         return []
     try:
@@ -493,9 +499,9 @@ def frontend_lock_problem(repo_root: Path | None = None) -> list[Problem]:
     ]
     return [
         Problem(
-            "frontend lock",
+            "js lock",
             "package-lock.json is out of sync with package.json (npm ci would fail). "
-            "Run `make npm-lock-check` / `npm install` in frontend/. "
+            "Run `make npm-lock-check` / `npm install` in the lock directory. "
             + "; ".join(missing[:3]),
         )
     ]

@@ -31,6 +31,12 @@ CONTRACT_FILE = "swarm.yaml"
 # Today's behaviour, in one place (048 T9 moves the consumers here).
 DEFAULT_SPECS_DIR = "specs/harness"
 DEFAULT_SCOPE: tuple[str, ...] = ("src/", "tests/")
+# Paths treated as type-checked frontend work (routing, tests-first heuristics).
+DEFAULT_FRONTEND_DIRS: tuple[str, ...] = ("src/", "ui/", "lib/")
+# Where browser specs live, relative to the target root.
+DEFAULT_E2E_ROOT = ""
+DEFAULT_E2E_DIR = "e2e"
+DEFAULT_LOCK_DIR = ""
 DEFAULT_GATES: tuple[str, ...] = ()
 # Affected-gate selection: a glob → the gates that delta can break. Moved here
 # from gates.DEFAULT_MAP so the factory and the app share one declaration.
@@ -101,12 +107,26 @@ class Contract:
     db_script: str = DEFAULT_DB_SCRIPT
     python_venv: str = DEFAULT_PYTHON_VENV
     harness_specs: tuple[str, ...] = DEFAULT_HARNESS_SPECS
+    frontend_dirs: tuple[str, ...] = DEFAULT_FRONTEND_DIRS
+    e2e_root: str = DEFAULT_E2E_ROOT
+    e2e_dir: str = DEFAULT_E2E_DIR
+    lock_dir: str = DEFAULT_LOCK_DIR
     gate_map: tuple[tuple[str, tuple[str, ...]], ...] = DEFAULT_GATE_MAP
     risk_classes: dict[int, tuple[str, ...]] = field(
         default_factory=lambda: dict(DEFAULT_RISK_CLASSES)
     )
     source: str = "defaults"  # "defaults" | the file it was read from
     extra: dict[str, Any] = field(default_factory=dict)
+
+    def e2e_prefix(self) -> str:
+        """The target-relative prefix browser specs live under (`e2e`, or `ui/e2e`)."""
+        return "/".join(part for part in (self.e2e_root.strip("/"), self.e2e_dir.strip("/")) if part)
+
+    def e2e_repo_path(self, file: str) -> str:
+        """Repo-relative path of a triage file (`e2e/x.spec.ts` → the full path)."""
+        return "/".join(
+            part for part in (self.e2e_root.strip("/"), str(file).lstrip("/")) if part
+        )
 
     def path(self, *parts: str) -> Path:
         """A path inside the target repo."""
@@ -181,6 +201,11 @@ def load(root: Path | None = None, *, text: str | None = None) -> Contract:
         python_venv=_as_str(python.get("venv"), "python.venv") or DEFAULT_PYTHON_VENV,
         harness_specs=_as_tuple(raw.get("harness_specs"), "harness_specs")
         or DEFAULT_HARNESS_SPECS,
+        frontend_dirs=_as_tuple(raw.get("frontend_dirs"), "frontend_dirs")
+        or DEFAULT_FRONTEND_DIRS,
+        e2e_root=_as_str(raw.get("e2e_root"), "e2e_root"),
+        e2e_dir=_as_str(raw.get("e2e_dir"), "e2e_dir") or DEFAULT_E2E_DIR,
+        lock_dir=_as_str(raw.get("lock_dir"), "lock_dir"),
         gate_map=_gate_map(raw.get("gate_map")) or DEFAULT_GATE_MAP,
         source=source,
         extra=extra,
@@ -261,6 +286,7 @@ def main() -> int:
     print(f"python     {contract.python_venv}")
     print(f"harness    {len(contract.harness_specs)} spec(s)")
     print(f"gate_map   {len(contract.gate_map)} rule(s)")
+    print(f"e2e        {contract.e2e_prefix()}")
     return 0
 
 

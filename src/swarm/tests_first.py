@@ -61,7 +61,12 @@ def command_for(paths: Iterable[str], gates: Iterable[str]) -> str:
     phase still works on a checkout without configured gates.
     """
     gates = list(gates)
-    frontend = any(str(p).replace("\\", "/").startswith("frontend/") for p in paths)
+    from swarm import contract
+
+    frontend = any(
+        str(p).replace("\\", "/").startswith(contract.current().frontend_dirs)
+        for p in paths
+    )
     for gate in gates:
         low = gate.lower()
         if "test" not in low and "vitest" not in low:

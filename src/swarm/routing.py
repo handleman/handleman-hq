@@ -46,7 +46,9 @@ LOGIC_WORDS = (
     "calc",
 )
 FRONTEND_SUFFIXES = (".svelte", ".ts", ".tsx", ".js", ".jsx", ".css", ".html")
-FRONTEND_DIRS = ("frontend/", "ui/", "src/")
+from swarm import contract
+
+FRONTEND_DIRS = contract.DEFAULT_FRONTEND_DIRS
 EDIT_WORDS = ("edit", "update", "change", "modify", "fix", "adjust", "extend", "replace")
 PATH_RE = re.compile(r"`([^`]+)`")
 
@@ -80,7 +82,7 @@ def classify_step(
     """Decide paid vs local for one micro-step.
 
     Non-trivial (paid) when any of: retry attempt, >1 file, an existing file is
-    edited, a frontend/type-checked path is touched, or the wording implies
+    edited, a frontend (type-checked) type-checked path is touched, or the wording implies
     logic/tests/API/DB work. Trivial (local) only for a single *new* small file
     with mechanical wording.
     """
@@ -96,7 +98,7 @@ def classify_step(
         return Route("paid", f"{len(paths)} files")
     target = paths[0]
     if any(target.endswith(suffix) for suffix in FRONTEND_SUFFIXES):
-        return Route("paid", "frontend/type-checked file")
+        return Route("paid", "frontend (type-checked) type-checked file")
     if any(part in target for part in FRONTEND_DIRS):
         return Route("paid", "frontend path")
     if any(word in text for word in LOGIC_WORDS):

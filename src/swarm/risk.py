@@ -8,8 +8,8 @@ turns later reverts into an escape rate per label (`docs/risk-classes.md`).
 | class | paths |
 | --- | --- |
 | 0 | docs/**, *.md |
-| 1 | tests/**, frontend/e2e/** |
-| 2 | app/**, frontend/src/**, contracts/** |
+| 1 | tests/**, e2e/** |
+| 2 | src/**, lib/**, schemas/** |
 | 3 | swarm/**, specs/**, migrations, auth/payments/infra, config, unknown, empty |
 
 Conservative by construction: an empty or unrecognised delta is class 3, never

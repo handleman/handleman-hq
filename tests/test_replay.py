@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from swarm.bench import replay
+from swarm.drivers.bench import replay
 
 
 def _result(case: str, *, ok: bool, seconds: int = 100, tokens: int = 1000, fixes: int = 0) -> dict:
@@ -106,4 +106,4 @@ def test_baseline_roundtrip_records_the_commit(tmp_path: Path):
 def test_makefile_exposes_the_suite():
     makefile = (Path(__file__).resolve().parents[1] / "Makefile").read_text()
     assert "swarm-replay:" in makefile and "swarm-replay-off:" in makefile
-    assert "-m swarm.bench.replay" in makefile
+    assert "-m swarm.drivers.bench.replay" in makefile
