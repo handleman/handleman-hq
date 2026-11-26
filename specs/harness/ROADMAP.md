@@ -66,6 +66,8 @@ until they diverge. v0.4.0 released.
 
 ## Done — v0.5 hardening
 
+- `[x]` Interaction checks: `acceptance.toml` gains `click`/`wait_for`; 007 now probes
+  the walk-start interaction (1 passed, 7 declared N/A).
 - `[x]` Oracle self-test in the factory: `acceptance --selftest` mutates each
   check's target and fails a check that still passes; the report lists it.
   **Verified on the app: 14/14 strict + selftest, no always-passing check.**
