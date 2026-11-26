@@ -328,3 +328,19 @@ def test_the_design_cache_is_out_of_coder_scope():
 
     assert not in_scope("designs/abc/1-2.json", ("designs/",))
     assert in_scope("frontend/src/App.svelte", ("frontend/",))
+
+
+def test_auto_uses_rest_when_the_api_token_is_present(monkeypatch, tmp_path):
+    from swarm.design.sync import choose_transport
+
+    monkeypatch.setenv("TEST_FIGMA_TOKEN", "figd_test")
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "state"))
+    assert choose_transport(_config()) == "rest"
+
+
+def test_auto_uses_mcp_without_the_api_token(monkeypatch, tmp_path):
+    from swarm.design.sync import choose_transport
+
+    monkeypatch.delenv("TEST_FIGMA_TOKEN", raising=False)
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "state"))
+    assert choose_transport(_config()) == "mcp"

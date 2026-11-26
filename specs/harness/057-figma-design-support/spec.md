@@ -103,8 +103,7 @@ New optional block; absent means no design lane (today's behaviour):
 design:
   provider: figma
   transport: auto                # auto (default) | mcp | rest
-  # auto: MCP when a token is stored, REST when FIGMA_TOKEN is set,
-  # otherwise the first-run MCP OAuth prompt.
+  # auto is token-first: FIGMA_TOKEN present -> REST; absent -> MCP OAuth.
   file_key: "<key from /design/<key>/...>"
   nodes: ["12:34", "56:78"]      # allowlist; no other node may enter a prompt
   token_env: FIGMA_TOKEN         # REST fallback only; default
@@ -245,10 +244,11 @@ as MCP, so the IR, brief, prompts, checks and offline behaviour are identical.
 | CI/headless | needs a browser callback (or paste) | yes, token only |
 | Output | same design cache | same design cache |
 
-`auto` (default) picks MCP if a token is stored, REST if `FIGMA_TOKEN` is set,
-and otherwise starts the MCP OAuth prompt. The operator can force either with
-`transport: mcp|rest` or `--transport`. Both are first-class; neither is
-deprecated.
+`auto` (default) is token-first: check `token_env` (`FIGMA_TOKEN`); if it is
+present, use REST. If it is absent, switch to MCP and start the first-run OAuth.
+A stored MCP token does not override an explicit API token. The operator can
+force either with `transport: mcp|rest` or `--transport`. Both are first-class;
+neither is deprecated.
 
 ## Design cache (committed, the only thing the queue reads)
 

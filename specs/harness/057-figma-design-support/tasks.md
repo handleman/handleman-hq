@@ -27,8 +27,7 @@ One task maps to one AC (small tasks may share an AC). Documentation and the
 - [x] T4 (AC-14): **REST transport + auto.** `src/swarm/design/rest.py` with
   `X-Figma-Token`: `/nodes`, `/images`, `variables/local`, `components`,
   `styles`; timeouts, 429 backoff, size caps; the same IR/cache. `transport:
-  mcp|rest|auto` (`auto`: MCP token → MCP; else `FIGMA_TOKEN` → REST; else
-  OAuth). The MCP token is never sent to REST. Fixture tests prove the same
+  mcp|rest|auto` (`auto`: `FIGMA_TOKEN` → REST; else MCP OAuth). The MCP token is never sent to REST. Fixture tests prove the same
   brief/IR shape from both.
 - [x] T5 (AC-1, AC-3, AC-9): **Sync + lock.** `hq design sync|check` over either
   transport: atomic temp-dir → replace, `design.lock` (Figma version + node ids

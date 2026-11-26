@@ -14,8 +14,8 @@ Figma file
 OpenCode operator ──(MCP, OAuth via /mcps)──────┘  (human lane, same file)
 ```
 
-Both transports write the same cache. `transport: auto` prefers a stored MCP
-token, then `FIGMA_TOKEN` (REST), then the first-run MCP OAuth prompt. The cache
+Both transports write the same cache. `transport: auto` is token-first:
+`FIGMA_TOKEN` present → REST; absent → MCP with the first-run OAuth prompt. The cache
 is what the queue reads; Figma is contacted only by `hq design sync`/auth.
 
 ## Phases

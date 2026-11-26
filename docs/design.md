@@ -12,9 +12,11 @@ the run itself reads only that cache.
 | Data | read tools: metadata, design context, variables, screenshots, assets, Code Connect | raw nodes, images, variables, components, styles |
 | Best for | the same workflow as OpenCode, latest tools | CI/headless, no browser callback |
 
-`transport: auto` (default) picks MCP when a token is stored, REST when
-`FIGMA_TOKEN` is set, and otherwise starts the MCP OAuth prompt. The MCP token
-is scoped to `mcp:connect` and is **not** a REST token.
+`transport: auto` (default) is **token-first**: if the API token
+(`token_env`, usually `FIGMA_TOKEN`) is present it uses REST; if it is absent it
+switches to MCP and starts the first-run OAuth. A stored MCP token does not
+override an explicit API token. The MCP token is scoped to `mcp:connect` and is
+**not** a REST token.
 
 ## Contract
 

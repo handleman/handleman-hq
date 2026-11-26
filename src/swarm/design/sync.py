@@ -38,16 +38,18 @@ def resolve(
 
 
 def choose_transport(config: DesignConfig, requested: str = "") -> str:
+    """Explicit transport wins; `auto` is token-first.
+
+    The operator's rule: a Figma API token present (`token_env`, usually
+    `FIGMA_TOKEN`) means REST; otherwise fall through to MCP and its first-run
+    OAuth. A stored MCP token does not override an explicit REST token.
+    """
     transport = (requested or config.transport or "auto").strip().lower()
     if transport in {"mcp", "rest"}:
         return transport
     if transport != "auto":
         raise DesignConfigError("transport must be auto, mcp or rest")
-    if oauth.status(config)["authenticated"]:
-        return "mcp"
-    if config.rest_token():
-        return "rest"
-    return "mcp"
+    return "rest" if config.rest_token() else "mcp"
 
 
 def _mcp_tokens(client: McpClient, node: str, budget: Budget, cache: Path) -> dict[str, Any]:
@@ -248,7 +250,14 @@ def brief_for(root: Path, config: DesignConfig, *, limit: int = 8000) -> str:
 
 def status(config: DesignConfig) -> dict[str, Any]:
     st = oauth.status(config)
-    st.update({"transport": config.transport, "file_key": config.file_key, "nodes": list(config.nodes)})
+    st.update(
+        {
+            "transport": config.transport,
+            "auto_transport": "rest" if config.rest_token() else "mcp",
+            "file_key": config.file_key,
+            "nodes": list(config.nodes),
+        }
+    )
     return st
 
 
