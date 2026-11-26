@@ -185,6 +185,25 @@ def load(root: Path | None = None, *, text: str | None = None) -> Contract:
     risk = raw.get("risk") or {}
     db = raw.get("db") or {}
     python = raw.get("python") or {}
+
+    # `e2e` accepts a string or the documented mapping:
+    #   e2e: {command: ..., specs: frontend/e2e}   (specs sets root/dir)
+    e2e_raw = raw.get("e2e")
+    e2e_root = _as_str(raw.get("e2e_root"), "e2e_root")
+    e2e_dir = _as_str(raw.get("e2e_dir"), "e2e_dir") or DEFAULT_E2E_DIR
+    if isinstance(e2e_raw, dict):
+        e2e_command = _as_str(e2e_raw.get("command"), "e2e.command")
+        specs = _as_str(e2e_raw.get("specs"), "e2e.specs")
+        if specs:
+            root, _, directory = specs.rstrip("/").rpartition("/")
+            e2e_root = root
+            e2e_dir = directory or DEFAULT_E2E_DIR
+        e2e_root = _as_str(e2e_raw.get("root"), "e2e.root") or e2e_root
+        e2e_dir = _as_str(e2e_raw.get("dir"), "e2e.dir") or e2e_dir
+    elif e2e_raw is None or isinstance(e2e_raw, str):
+        e2e_command = _as_str(e2e_raw, "e2e")
+    else:
+        raise ContractError("e2e must be a command string or a mapping with command")
     for key, value in (("risk", risk), ("db", db), ("python", python)):
         if value and not isinstance(value, dict):
             raise ContractError(f"{key} must be a mapping")
@@ -194,7 +213,7 @@ def load(root: Path | None = None, *, text: str | None = None) -> Contract:
         specs_dir=_as_str(raw.get("specs_dir"), "specs_dir") or DEFAULT_SPECS_DIR,
         scope=_as_tuple(raw.get("scope"), "scope") or DEFAULT_SCOPE,
         gates=_as_tuple(raw.get("gates"), "gates") or DEFAULT_GATES,
-        e2e=_as_str(raw.get("e2e"), "e2e") or DEFAULT_E2E,
+        e2e=e2e_command or DEFAULT_E2E,
         risk_profile=_as_str(risk.get("profile"), "risk.profile") or DEFAULT_RISK_PROFILE,
         risk_classes=_risk_classes(risk.get("classes")) or dict(DEFAULT_RISK_CLASSES),
         db_script=_as_str(db.get("script"), "db.script") or DEFAULT_DB_SCRIPT,
@@ -203,8 +222,8 @@ def load(root: Path | None = None, *, text: str | None = None) -> Contract:
         or DEFAULT_HARNESS_SPECS,
         frontend_dirs=_as_tuple(raw.get("frontend_dirs"), "frontend_dirs")
         or DEFAULT_FRONTEND_DIRS,
-        e2e_root=_as_str(raw.get("e2e_root"), "e2e_root"),
-        e2e_dir=_as_str(raw.get("e2e_dir"), "e2e_dir") or DEFAULT_E2E_DIR,
+        e2e_root=e2e_root,
+        e2e_dir=e2e_dir,
         lock_dir=_as_str(raw.get("lock_dir"), "lock_dir"),
         gate_map=_gate_map(raw.get("gate_map")) or DEFAULT_GATE_MAP,
         source=source,

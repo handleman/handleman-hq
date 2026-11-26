@@ -100,3 +100,12 @@ def test_the_cli_prints_the_resolved_contract(tmp_path, capsys, monkeypatch):
     assert contract.main() == 0
     out = capsys.readouterr().out
     assert "specs/harness" in out and "harness" in out
+
+def test_e2e_accepts_a_command_or_a_mapping():
+    as_string = contract.load(text="e2e: npm run test:e2e\n")
+    assert as_string.e2e == "npm run test:e2e"
+    as_map = contract.load(
+        text="e2e:\n  command: npm run test:e2e\n  specs: frontend/e2e\n"
+    )
+    assert as_map.e2e == "npm run test:e2e"
+    assert as_map.e2e_prefix() == "frontend/e2e"
