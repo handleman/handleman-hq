@@ -68,6 +68,9 @@ until they diverge. v0.4.0 released.
 
 - `[x]` Interaction checks: `acceptance.toml` gains `click`/`wait_for`; 007 now probes
   the walk-start interaction (1 passed, 7 declared N/A).
+- `[x]` **Check isolation:** the runner reloads at each spec boundary (an
+  interaction in 007 hid the top card from 014/028/040), `route_request`
+  resets its request counter and accepts an explicit `origin` (v0.4.9).
 - `[x]` Oracle self-test in the factory: `acceptance --selftest` mutates each
   check's target and fails a check that still passes; the report lists it.
   **Verified on the app: 14/14 strict + selftest, no always-passing check.**
