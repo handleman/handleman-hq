@@ -20,6 +20,7 @@ but tolerant of unknown keys, so an older factory can read a newer file.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -40,8 +41,43 @@ DEFAULT_SCOPE: tuple[str, ...] = (
     ".gitignore",
 )
 DEFAULT_GATES: tuple[str, ...] = ()
+# Affected-gate selection: a glob → the gates that delta can break. Moved here
+# from gates.DEFAULT_MAP so the factory and the app share one declaration.
+DEFAULT_GATE_MAP: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("app/**", ("pytest -q", "ruff check .", "mypy app tests")),
+    ("tests/**", ("pytest -q", "ruff check .", "mypy app tests")),
+    ("contracts/**", ("pytest -q",)),
+    (
+        "frontend/**",
+        (
+            "npm --prefix frontend run check",
+            "npm --prefix frontend run lint",
+            "npm --prefix frontend test -- --run",
+        ),
+    ),
+)
 DEFAULT_E2E = "npm --prefix frontend run test:e2e"
 DEFAULT_RISK_PROFILE = "comfort-walking-router"
+# Path classes for the risk label (moved from risk.py). Class 3 is always the
+# fallback: an unrecognised delta must never look safe.
+DEFAULT_RISK_CLASSES: dict[int, tuple[str, ...]] = {
+    1: ("tests/", "frontend/e2e/", "e2e/"),
+    2: ("app/", "frontend/src/", "frontend/lib/", "contracts/"),
+    3: (
+        "swarm/",
+        "specs/",
+        ".github/",
+        "docker/",
+        "requirements",
+        "pyproject.toml",
+        "app/auth",
+        "auth",
+        "migrations",
+        "payments",
+        "secrets",
+        "infra",
+    ),
+}
 DEFAULT_DB_SCRIPT = "swarm/db.sh"
 DEFAULT_PYTHON_VENV = ".venv"
 DEFAULT_HARNESS_SPECS: tuple[str, ...] = (
@@ -84,6 +120,10 @@ class Contract:
     db_script: str = DEFAULT_DB_SCRIPT
     python_venv: str = DEFAULT_PYTHON_VENV
     harness_specs: tuple[str, ...] = DEFAULT_HARNESS_SPECS
+    gate_map: tuple[tuple[str, tuple[str, ...]], ...] = DEFAULT_GATE_MAP
+    risk_classes: dict[int, tuple[str, ...]] = field(
+        default_factory=lambda: dict(DEFAULT_RISK_CLASSES)
+    )
     source: str = "defaults"  # "defaults" | the file it was read from
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -155,13 +195,62 @@ def load(root: Path | None = None, *, text: str | None = None) -> Contract:
         gates=_as_tuple(raw.get("gates"), "gates") or DEFAULT_GATES,
         e2e=_as_str(raw.get("e2e"), "e2e") or DEFAULT_E2E,
         risk_profile=_as_str(risk.get("profile"), "risk.profile") or DEFAULT_RISK_PROFILE,
+        risk_classes=_risk_classes(risk.get("classes")) or dict(DEFAULT_RISK_CLASSES),
         db_script=_as_str(db.get("script"), "db.script") or DEFAULT_DB_SCRIPT,
         python_venv=_as_str(python.get("venv"), "python.venv") or DEFAULT_PYTHON_VENV,
         harness_specs=_as_tuple(raw.get("harness_specs"), "harness_specs")
         or DEFAULT_HARNESS_SPECS,
+        gate_map=_gate_map(raw.get("gate_map")) or DEFAULT_GATE_MAP,
         source=source,
         extra=extra,
     )
+
+
+def _risk_classes(raw: Any) -> dict[int, tuple[str, ...]]:
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise ContractError("risk.classes must be a mapping of class -> path list")
+    out: dict[int, tuple[str, ...]] = {}
+    for key, values in raw.items():
+        try:
+            cls = int(key)
+        except (TypeError, ValueError) as exc:
+            raise ContractError(f"risk.classes key {key!r} is not an integer") from exc
+        if cls not in (1, 2, 3):
+            raise ContractError(f"risk.classes key {cls} is not 1, 2 or 3")
+        out[cls] = _as_tuple(values, f"risk.classes.{cls}")
+    return out
+
+
+def _gate_map(raw: Any) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    if raw is None:
+        return ()
+    if not isinstance(raw, dict):
+        raise ContractError("gate_map must be a mapping of glob -> gate list")
+    out: list[tuple[str, tuple[str, ...]]] = []
+    for glob, commands in raw.items():
+        name = str(glob).strip()
+        if not name:
+            continue
+        out.append((name, _as_tuple(commands, f"gate_map.{name}")))
+    return tuple(out)
+
+
+@lru_cache(maxsize=8)
+def _cached(root: str, mtime: float) -> Contract:
+    return load(Path(root))
+
+
+def current(root: Path | None = None) -> Contract:
+    """The contract for `root`, cached until `swarm.yaml` changes."""
+    base = Path(root or REPO_ROOT)
+    path = base / CONTRACT_FILE
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        mtime = 0.0
+    return _cached(str(base), mtime)
 
 
 def _parse(text: str, where: str) -> tuple[dict[str, Any], str]:
@@ -190,6 +279,7 @@ def main() -> int:
     print(f"db         {contract.db_script}")
     print(f"python     {contract.python_venv}")
     print(f"harness    {len(contract.harness_specs)} spec(s)")
+    print(f"gate_map   {len(contract.gate_map)} rule(s)")
     return 0
 
 

@@ -20,6 +20,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from swarm import contract
+
 CLASS_LABELS = {
     0: "docs",
     1: "tests",
@@ -27,23 +29,6 @@ CLASS_LABELS = {
     3: "control",
 }
 
-# Any of these is control-plane or sensitive.
-_CLASS_3 = (
-    "swarm/",
-    "specs/",
-    ".github/",
-    "docker/",
-    "requirements",
-    "pyproject.toml",
-    "app/auth",
-    "auth",
-    "migrations",
-    "payments",
-    "secrets",
-    "infra",
-)
-_CLASS_2 = ("app/", "frontend/src/", "frontend/lib/", "contracts/")
-_CLASS_1 = ("tests/", "frontend/e2e/", "e2e/")
 
 
 def classify(changed: list[str], brief: str = "") -> int:
@@ -51,10 +36,14 @@ def classify(changed: list[str], brief: str = "") -> int:
     paths = [str(path).replace("\\", "/").lstrip("./") for path in changed or []]
     if not paths:
         return 3
+    classes = contract.current().risk_classes
+    class_1 = classes.get(1, ())
+    class_2 = classes.get(2, ())
+    class_3 = classes.get(3, ())
     text = (brief or "").lower()
     if any(marker in text for marker in ("auth", "payment", "migration", "infra", "secret")):
         return 3
-    if any(path.startswith(prefix) for path in paths for prefix in _CLASS_3):
+    if any(path.startswith(prefix) for path in paths for prefix in class_3):
         return 3
     if any("migrations" in path or "/auth/" in path or path.endswith("/auth.py") for path in paths):
         return 3
@@ -62,9 +51,9 @@ def classify(changed: list[str], brief: str = "") -> int:
         return 3
     if all(path.startswith("docs/") or path.endswith(".md") for path in paths):
         return 0
-    if all(path.startswith(_CLASS_1) for path in paths):
+    if all(path.startswith(class_1) for path in paths):
         return 1
-    if all(path.startswith(_CLASS_2) for path in paths):
+    if all(path.startswith(class_2) for path in paths):
         return 2
     return 3
 

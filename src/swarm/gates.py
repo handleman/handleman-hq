@@ -27,21 +27,11 @@ from __future__ import annotations
 import fnmatch
 import os
 
+from swarm import contract
+
 # Sensible defaults for this repo (overridable with SWARM_GATE_MAP). Paths not
 # covered here select every command: fail-open is the safe direction.
-DEFAULT_MAP: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("app/**", ("pytest -q", "ruff check .", "mypy app tests")),
-    ("tests/**", ("pytest -q", "ruff check .", "mypy app tests")),
-    ("contracts/**", ("pytest -q",)),
-    (
-        "frontend/**",
-        (
-            "npm --prefix frontend run check",
-            "npm --prefix frontend run lint",
-            "npm --prefix frontend test -- --run",
-        ),
-    ),
-)
+DEFAULT_MAP = contract.DEFAULT_GATE_MAP
 
 
 def enabled(env: dict[str, str] | None = None) -> bool:
@@ -71,7 +61,8 @@ def gate_map(env: dict[str, str] | None = None) -> list[tuple[str, list[str]]]:
     parsed = parse_map(raw)
     if parsed:
         return parsed
-    return [(glob, list(commands)) for glob, commands in DEFAULT_MAP]
+    current = contract.current().gate_map
+    return [(glob, list(commands)) for glob, commands in (current or DEFAULT_MAP)]
 
 
 def _match(path: str, glob: str) -> bool:

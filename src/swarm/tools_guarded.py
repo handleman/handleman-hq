@@ -17,6 +17,7 @@ from crewai.tools import BaseTool
 from crewai_tools import FileReadTool
 from pydantic import BaseModel, Field
 
+from swarm import contract
 from swarm.paths import REPO_ROOT
 
 # Small models lose the plot when tool outputs flood context (819k-token blowup
@@ -51,16 +52,7 @@ def verify_read_chars() -> int:
 # overrides, comma-separated). Everything else (swarm/, specs/, docs/, .env*) is
 # off-limits. Keep this the single source of truth: crew.py derives its prompt
 # from it, and flow.py resolves the same override.
-DEFAULT_SCOPE = (
-    "app/",
-    "frontend/",
-    "tests/",
-    "contracts/",
-    "requirements-dev.txt",
-    "requirements.txt",
-    "pyproject.toml",
-    ".gitignore",
-)
+DEFAULT_SCOPE = contract.DEFAULT_SCOPE
 
 SECRET_NAMES = {"id_rsa", "id_ed25519", "credentials", "credentials.json", "secrets", "secrets.json"}
 SECRET_SUFFIXES = (".pem", ".key", ".p12", ".pfx")
@@ -98,8 +90,9 @@ def _safe_rel(path: str) -> str | None:
 
 
 def resolve_scope() -> tuple[str, ...]:
-    """Coder scope: SWARM_SCOPE (comma-separated) overrides, else DEFAULT_SCOPE."""
-    return tuple(s for s in os.getenv("SWARM_SCOPE", "").split(",") if s) or DEFAULT_SCOPE
+    """Coder scope: SWARM_SCOPE overrides, else the repo contract (048 AC-4)."""
+    override = tuple(s for s in os.getenv("SWARM_SCOPE", "").split(",") if s)
+    return override or contract.current().scope
 
 
 def task_scope(base: tuple[str, ...], brief: str) -> tuple[str, ...]:

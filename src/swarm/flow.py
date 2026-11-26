@@ -25,7 +25,7 @@ from typing import Any
 from crewai.flow.flow import Flow, listen, start
 from pydantic import BaseModel
 
-from swarm import artifacts, compaction, fixcause, journal, llms
+from swarm import artifacts, compaction, contract, fixcause, journal, llms
 from swarm.paths import REPO_ROOT
 
 with contextlib.suppress(Exception):
@@ -791,6 +791,9 @@ def gate_commands(env: dict[str, str] | None = None) -> list[str]:
     raw = env.get("SWARM_GATE_COMMANDS", "").strip()
     if raw:
         return [cmd.strip() for cmd in re.split(r"[;\n]", raw) if cmd.strip()]
+    configured = contract.current().gates
+    if configured:
+        return list(configured)
     return list(DEFAULT_GATE_COMMANDS)
 
 
@@ -4648,34 +4651,12 @@ def _runnable_spec(name: str) -> bool:
     """Should the queue consider this spec? (032: the spec says what it is.)"""
     from swarm.spec_loader import spec_kind
 
-    if name in HARNESS_SPECS:
+    if name in contract.current().harness_specs or name in HARNESS_SPECS:
         return False
     return spec_kind(REPO_ROOT, name) != "harness"
 
 
-HARNESS_SPECS = (
-    "009-swarm-harness",
-    "012-dark-factory-harness",
-    "013-dark-factory-phase-2",
-    "015-dark-factory-economics",
-    "016-conflict-recovery",
-    "017-coder-selfcheck",
-    "018-operator-readable-runs",
-    "019-scenario-verifier",
-    "020-harness-efficiency",
-    "021-fix-loop",
-    "022-lean-loop",
-    "023-parallel-factory",
-    "024-earned-autonomy",
-    "025-durable-journal",
-    "026-run-guards",
-    "027-e2e-self-heal",
-    "030-operator-runbooks",
-    "031-dashboard-update",
-    "032-spec-kind",
-    "033-planner-coder-chain",
-    "034-spec-folders",
-)
+HARNESS_SPECS = contract.DEFAULT_HARNESS_SPECS
 
 
 def _spec_after(repo_root: Path, current_dir: str) -> str | None:
