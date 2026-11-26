@@ -83,10 +83,10 @@ swarm.yaml.example  the contract, every key documented
 
 ## Status
 
-**v0.3.8** — packaged, contract-driven, provider-agnostic: 37 providers with one
-registry, strict prefixes, key/base validation and a key-free reachability probe.
-The app (`comfort-walking-router`) consumes it. Next: moving the drivers into
-target repos (v0.4).
+**v0.4.0** — packaged, contract-driven, provider-agnostic (37 providers, strict
+prefixes, key-free probe) and driver-aware: a target declares its e2e/db (and
+optionally acceptance/smoke) as JSON-speaking commands, with the packaged
+implementation as the fallback. The app consumes it.
 
 ## Roadmap
 

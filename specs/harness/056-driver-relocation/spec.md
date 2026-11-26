@@ -68,7 +68,7 @@ drivers:
 - [ ] **AC-4 (target templates).** `docs/drivers.md` documents the protocol and
   ships copy-paste examples for a Python repo (`pytest` as the "e2e") and a
   Node repo (Playwright), plus how to keep the packaged fallback.
-- [ ] **AC-5 (app migration).** `comfort-walking-router` moves its e2e/acceptance/
+- [x] **AC-5 (app migration).** `comfort-walking-router` moves its e2e/acceptance/
   smoke/smoke/db drivers to `drivers/` and declares them; `make e2e`,
   `make swarm-accept`, `make smoke-live`, `make swarm-db-*` still pass. No
   behaviour change in a run that uses the packaged drivers.

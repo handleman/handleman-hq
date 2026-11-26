@@ -40,10 +40,11 @@ Design: [`055-provider-matrix/`](055-provider-matrix/). Research:
 6. `[x]` **T6 prices** — first-class families priced; unpaid/unpriced warns.
 7. `[x]` **T7 regression** — pytest/ruff/mypy green, no network in tests.
 
-## Now — v0.4 driver relocation (048 T11–T12) — **core done**
+## Done — v0.4 driver relocation (048 T11–T12)
 
-Spec: [`056-driver-relocation/`](056-driver-relocation/). T1–T4/T6 landed (contract,
-dispatch, wiring, docs); T5 (app migration) remains.
+Spec: [`056-driver-relocation/`](056-driver-relocation/). The target declares
+`drivers.{e2e,db}` (`drivers/e2e.sh` in the app); acceptance/smoke stay packaged
+until they diverge. v0.4.0 released.
 
 8. `[ ]` Move `smoke`, `corridor_check`, `db.sh`, the app-specific acceptance
    parts into the **target repos** under `drivers/`; the core calls them through
@@ -52,7 +53,7 @@ dispatch, wiring, docs); T5 (app migration) remains.
    (the current `swarm.drivers` package stays as the fallback until v0.4 ships).
 10. `[ ]` Release **v0.4.0** with a migration note for the app.
 
-## Then — coverage and the visual phase
+## Now — coverage and the visual phase
 
 11. `[ ]` **Acceptance coverage** — write `acceptance.toml` for the 11 older app
     specs (001, 004–008, 010, 011, 014, 029, 035, 036; several are API/infra
