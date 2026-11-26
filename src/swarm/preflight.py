@@ -415,15 +415,20 @@ def check(
                         Problem(var, f"{model_id(model)} is not offered by {prov} right now")
                     )
 
-    # 3. Venvs + gate binaries (same PATH the Guarded Shell uses).
-    for label, path in (
-        ("app venv", REPO_ROOT / ".venv" / "bin" / "python"),
-        ("swarm venv", REPO_ROOT / "swarm" / ".venv" / "bin" / "python"),
-    ):
-        if not path.exists():
-            hint = "make dev-setup" if label == "app venv" else "make swarm-test"
-            problems.append(Problem(label, f"missing {path} (run `{hint}`)"))
-    bins = [REPO_ROOT / ".venv" / "bin", REPO_ROOT / "swarm" / ".venv" / "bin"]
+    # 3. The target venv + gate binaries (same PATH the Guarded Shell uses).
+    #    The harness runs on this interpreter, so only the app venv must exist;
+    #    a vendored checkout's `swarm/.venv` is added to PATH when present.
+    import sys as _sys
+
+    from swarm import contract as _contract
+
+    app_venv = _contract.current(REPO_ROOT).python_venv
+    app_python = REPO_ROOT / app_venv / "bin" / "python"
+    if not app_python.exists():
+        problems.append(
+            Problem("app venv", f"missing {app_python} (run `make dev-setup`)")
+        )
+    bins = [REPO_ROOT / app_venv / "bin", Path(_sys.executable).parent]
     path_env = os.pathsep.join([str(b) for b in bins if b.exists()] + [env.get("PATH", "")])
     for binary in _gate_binaries(env):
         if not which(binary, path=path_env):
