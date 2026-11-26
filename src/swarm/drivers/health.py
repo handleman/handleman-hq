@@ -9,6 +9,7 @@ non-zero with the tail when either is broken.
 from __future__ import annotations
 
 import subprocess
+import sys
 
 from swarm.paths import REPO_ROOT
 
@@ -55,22 +56,27 @@ def _run(argv: list[str], *, label: str) -> str | None:
 
 
 def check() -> list[str]:
-    """Every broken part of the stand; empty means healthy."""
+    """Every broken part of the stand; empty means healthy.
+
+    The app's interpreter comes from the target's contract (`python.venv`); the
+    browser suite runs on the interpreter this module is installed in, so the
+    check works for a vendored checkout (`.venv` + `swarm/.venv`) and for the
+    packaged harness (one harness venv) alike.
+    """
+    from swarm import contract
+
     problems: list[str] = []
-    app_python = REPO_ROOT / ".venv" / "bin" / "python"
-    swarm_python = REPO_ROOT / "swarm" / ".venv" / "bin" / "python"
+    target = contract.current(REPO_ROOT)
+    app_python = target.path(target.python_venv, "bin", "python")
     if app_python.exists():
         problem = _run([str(app_python), "-m", "pytest", "-q"], label="app tests")
         if problem:
             problems.append(problem)
     else:
         problems.append(f"app venv missing: {app_python} (run `make dev-setup`)")
-    if swarm_python.exists():
-        problem = _run([str(swarm_python), "-m", "swarm.drivers.e2e"], label="e2e suite")
-        if problem:
-            problems.append(problem)
-    else:
-        problems.append(f"swarm venv missing: {swarm_python} (run `make swarm-test`)")
+    problem = _run([sys.executable, "-m", "swarm.drivers.e2e"], label="e2e suite")
+    if problem:
+        problems.append(problem)
     return problems
 
 
