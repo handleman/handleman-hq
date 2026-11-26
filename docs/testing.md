@@ -91,3 +91,20 @@ python -m swarm.drivers.bench.replay --update-baseline  # snapshot the first run
   status/time/tokens/fix rounds, the totals and the harness commit.
 - `004-weather-sun-T2` is deliberately in the set: it is the case the 020 T8
   replay failed on (`verifier_blocked`), so it is the loop's current worst case.
+
+
+## Per-task visual phase (042)
+
+A green task records an **advisory** visual verdict in `run.json.visual`:
+
+- `SWARM_VISUAL_BASE_URL` points at a running app (e.g. `http://localhost:5173`).
+  Unset → `{"checked": false, "reason": "no SWARM_VISUAL_BASE_URL"}`; the
+  acceptance pass is what serves the app, so an unattended night never boots a
+  second server.
+- The check collects deterministic DOM facts (Leaflet tiles, the two search
+  inputs, top-card buttons, console errors) and writes desktop + mobile
+  screenshots to `<run>/visual_qa/`.
+- `ok: false` means obvious breakage (0 tiles, missing inputs) — it is recorded
+  and surfaced, **never used to flip green**: gates and the verifier still decide.
+- `SWARM_VISUAL_QA=0` disables the phase; a missing Playwright install or a dead
+  stand is recorded as `checked: false` + `error`, never raised.

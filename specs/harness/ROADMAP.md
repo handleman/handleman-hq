@@ -58,8 +58,9 @@ until they diverge. v0.4.0 released.
 11. `[x]` **Acceptance coverage** — 14/14 with `--strict`: 7 specs have browser
     probes, 7 declare their API/infra ACs `[[not_applicable]]`. N/A is a
     declaration, not an unchecked AC.
-12. `[ ]` **042 T3/T4** — `_visual_phase` is still a stub; wire the per-task
-    visual check into the flow with a deterministic fallback.
+12. `[x]` **042 T3/T4** — `_visual_phase` records deterministic DOM facts and
+    desktop/mobile screenshots in `run.json.visual` + `<run>/visual_qa/`; it is
+    advisory (never flips green) and skips cleanly without a running stand.
 13. `[x]` **048 T20** — `make swarm-accept --strict` passes 14/14 (the `--selftest`
     oracle check is the remaining v0.5 hardening, not a coverage gap).
 

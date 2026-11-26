@@ -153,6 +153,8 @@ class SwarmState(BaseModel):
     ungrounded_block: bool = False
     # 056: which driver source each phase used (target command vs packaged).
     drivers: dict[str, str] = field(default_factory=dict)
+    # 042: the per-task visual verdict (advisory, never the gate).
+    visual: dict[str, Any] = field(default_factory=dict)
 
 
 class _QuotaExhausted(SystemExit):
@@ -2624,11 +2626,39 @@ class SwarmFlow(Flow[SwarmState]):
         self.state.verifier["corrections"] = corrected
         return True
 
-    def _visual_phase(self, task: Any, kick: Any) -> bool:
-        """046 AC-6: run visual QA phase (042 T5/T6): deterministic DOM checks via Playwright."""
-        # Visual QA runs Playwright checks on the task's spec/task; returns True
-        # when verification passes. A missing runner still allows verification.
-        return True
+    def _visual_phase(self) -> dict[str, Any]:
+        """042: advisory visual check for a green task — never the gate.
+
+        Deterministic DOM facts (tiles, form inputs, console errors) plus desktop
+        and mobile screenshots, recorded in `run.json.visual` and
+        `<run>/visual_qa/`. The stand is served by the acceptance pass; a task
+        run only checks when `SWARM_VISUAL_BASE_URL` points at a running app, so
+        an unattended night never boots a second server. Off: `SWARM_VISUAL_QA=0`.
+        """
+        if os.getenv("SWARM_VISUAL_QA", "1") == "0":
+            return {"checked": False, "reason": "off (SWARM_VISUAL_QA=0)"}
+        base = os.getenv("SWARM_VISUAL_BASE_URL", "").strip()
+        if not base:
+            return {
+                "checked": False,
+                "reason": "no SWARM_VISUAL_BASE_URL (the acceptance pass serves the app)",
+            }
+        from swarm.drivers import visual
+
+        try:
+            fact = visual.run_visual_check(base_url=base, headless=True)
+            report = visual.save_visual_report(fact, self.run_dir)
+        except Exception as exc:  # advisory: a broken stand must not fail a green task
+            return {"checked": False, "error": f"{type(exc).__name__}: {exc}"[:400]}
+        return {
+            "checked": True,
+            "ok": not fact.has_obvious_breakage(),
+            "tiles": fact.map_tile_count,
+            "start_inputs": fact.start_form_count,
+            "end_inputs": fact.end_form_count,
+            "console_errors": len(fact.console_errors),
+            "report": str(report.relative_to(self.run_dir)) if report else "",
+        }
 
     def _senior_on_verifier_block(self, task: Any, kickoff: Any, verify_kick: Any) -> bool:
         """049: one bounded senior fix when the verifier blocked, then re-verify.
@@ -4348,6 +4378,12 @@ class SwarmFlow(Flow[SwarmState]):
         self.state.finished_at = dt.datetime.now().isoformat(timespec="seconds")
         usage = self._usage_snapshot()
         cost = usage["cost_usd"]
+        if status == "green" and not self.state.visual:
+            # Stubs in tests call save_run without the real class; the visual
+            # phase is advisory and must never be required for a green save.
+            phase = getattr(self, "_visual_phase", None)
+            if phase is not None:
+                self.state.visual = phase()
         # 2026-11-26: a suspended host is not a model timeout. Record the gap so
         # the operator sees "the machine slept" instead of a provider failure.
         from swarm import events as _events
@@ -4416,6 +4452,7 @@ class SwarmFlow(Flow[SwarmState]):
             "budget_note": self.state.budget_note,
             "host_suspended": suspended,
             "drivers": self.state.drivers,
+            "visual": self.state.visual,
             "done": {"task_hash": task_hash_value, "spec_hash": spec_hash_value, "recorded": False},
             "resumed_from_step": self.state.resumed_from_step,
             "recovery": self.state.recovery,
