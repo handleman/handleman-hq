@@ -21,6 +21,14 @@ swarm-accept: ## Spec acceptance pass (ARGS="--no-queue --selftest")
 provider-audit: ## Key-free reachability probe for every provider in the registry
 	$(PY) -m swarm.provider_audit $(ARGS)
 
+proxy: ## Local LiteLLM proxy for subscription plans (Claude/ChatGPT/Copilot)
+	@test -f examples/litellm-proxy/compose.yaml || { echo "missing examples/litellm-proxy"; exit 2; }
+	docker compose -f examples/litellm-proxy/compose.yaml up -d
+	@echo "proxy: http://localhost:4000 (dashboard /ui); point SWARM_*_MODEL at openai_compatible/<alias>"
+
+proxy-down: ## Stop the subscription proxy
+	docker compose -f examples/litellm-proxy/compose.yaml down
+
 factory-audit: ## Block a push that would publish caches, secrets or large blobs
 	$(PY) -m swarm.factory_audit
 

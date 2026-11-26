@@ -97,8 +97,9 @@ coverage and the per-task visual phase.
 ## Subscription plans
 
 Claude Pro/Max, ChatGPT/Codex and Copilot are usable through a local LiteLLM
-proxy — see [`examples/litellm-proxy/`](examples/litellm-proxy/README.md). API
-keys plug in directly ([`docs/providers.md`](docs/providers.md)).
+proxy: `make proxy` (and `make proxy-down`). See
+[`examples/litellm-proxy/`](examples/litellm-proxy/README.md). API keys plug in
+directly ([`docs/providers.md`](docs/providers.md)).
 
 ## Contributing
 
