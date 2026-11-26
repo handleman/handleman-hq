@@ -19,28 +19,28 @@ Status: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` dropped.
 - `[x]` **Docs** — packaged layout, `model-usage.md`, `AGENTS.md`, runbooks,
   `swarm.yaml.example`; provider research recorded.
 
-## Now — 055 provider matrix
+## Done — 055 provider matrix
 
 Design: [`055-provider-matrix/`](055-provider-matrix/). Research:
 [`docs/research/providers-2026.md`](../../docs/research/providers-2026.md).
 
-1. `[ ]` **T1 registry** — `src/swarm/providers.py` (prefix, keys, base, kind,
+1. `[x]` **T1 registry** — `src/swarm/providers.py` (prefix, keys, base, kind,
    catalogue, tools, docs); `model_config.provider()` delegates.
-2. `[ ]` **T2 routing** — every registry prefix routes to its provider; unknown
+2. `[x]` **T2 routing** — every registry prefix routes to its provider; unknown
    prefix errors (no silent OpenRouter); current Go profile unchanged.
-3. `[ ]` **T3 validation** — preflight checks key env(s), base URL and
+3. `[x]` **T3 validation** — preflight checks key env(s), base URL and
    model/prefix pairing; Bedrock/Vertex credential shapes.
-4. `[ ]` **T4 no-key probe** — `preflight --probe` classifies reachable /
+4. `[x]` **T4 no-key probe** — `preflight --probe` classifies reachable /
    auth-required / wrong-base / unreachable / incident; public catalogues and
    local `/api/tags` also verify ids; mocked tests, offline by default.
-5. `[ ]` **T5 docs** — `docs/providers.md` matrix + recipes (OpenAI, Anthropic,
+5. `[x]` **T5 docs** — `docs/providers.md` matrix + recipes (OpenAI, Anthropic,
    Gemini, Groq, Mistral, OpenRouter, Ollama, generic compatible, subscriptions
    via a local LiteLLM proxy incl. Copilot device flow) + the explicit "no
    public temporary key" section.
-6. `[ ]` **T6 prices** — first-class families priced; unpaid/unpriced warns.
-7. `[ ]` **T7 regression** — pytest/ruff/mypy green, no network in tests.
+6. `[x]` **T6 prices** — first-class families priced; unpaid/unpriced warns.
+7. `[x]` **T7 regression** — pytest/ruff/mypy green, no network in tests.
 
-## Next — v0.4 driver relocation (048 T11–T12)
+## Now — v0.4 driver relocation (048 T11–T12)
 
 8. `[ ]` Move `smoke`, `corridor_check`, `db.sh`, the app-specific acceptance
    parts into the **target repos** under `drivers/`; the core calls them through

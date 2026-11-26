@@ -82,10 +82,10 @@ swarm.yaml.example  the contract, every key documented
 
 ## Status
 
-**v0.2.0** — the harness is packaged and contract-driven (`src/swarm/`,
-`hq` CLI, `swarm.yaml`); the factory's own suite is green with no target tree.
-Driver relocation (browser suite/acceptance as the target's `drivers/`) and the
-full app migration land in v0.3. See `CHANGELOG.md` when present.
+**v0.3.8** — packaged, contract-driven, provider-agnostic: 37 providers with one
+registry, strict prefixes, key/base validation and a key-free reachability probe.
+The app (`comfort-walking-router`) consumes it. Next: moving the drivers into
+target repos (v0.4).
 
 ## Roadmap
 

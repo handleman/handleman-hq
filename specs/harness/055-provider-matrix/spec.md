@@ -31,12 +31,12 @@ URLs **without registering anywhere**.
 
 ## Acceptance criteria
 
-- [ ] **AC-1 (one registry).** A single `swarm/providers.py` table declares every
+- [x] **AC-1 (one registry).** A single `swarm/providers.py` table declares every
   supported provider: name, prefixes, kind (native / OpenAI-compatible / local /
   gateway / subscription), key env names, base-URL env, default base, catalogue
   endpoint (public, keyed, or none), docs URL, tool-calling support. `provider()`
   and `preflight` read it; a test pins the table and its completeness.
-- [ ] **AC-2 (routing is explicit).** `SWARM_<ROLE>_MODEL=prefix/model` routes to
+- [x] **AC-2 (routing is explicit).** `SWARM_<ROLE>_MODEL=prefix/model` routes to
   that provider for every entry in the registry (OpenAI, Anthropic, Gemini,
   Vertex, Azure, Bedrock, Mistral, xAI, DeepSeek, Groq, Together, Fireworks,
   Cerebras, SambaNova, Nebius, Hyperbolic, DeepInfra, Moonshot, MiniMax,
@@ -44,12 +44,12 @@ URLs **without registering anywhere**.
   OpenRouter, Copilot, local Ollama/vLLM/LM Studio). An unknown prefix with no
   OpenRouter key is a **preflight error naming the valid prefixes**, never a
   silent OpenRouter call; with an OpenRouter key it warns (back-compat).
-- [ ] **AC-3 (key/base validation).** For every provider a role uses, preflight
+- [x] **AC-3 (key/base validation).** For every provider a role uses, preflight
   checks the key env(s) are set, the base URL (if any) parses as https/http, and
   the model id has that provider's prefix (a `claude-…` id under `anthropic/` is
   fine; a bare one is rejected with the correct example). Bedrock/Vertex
   credential shapes are described, not invented.
-- [ ] **AC-4 (no-key connectivity probe).** `preflight --probe` (and
+- [x] **AC-4 (no-key connectivity probe).** `preflight --probe` (and
   `SWARM_PREFLIGHT_PROBE=1`) performs a key-free reachability check per used
   provider and classifies: `reachable` (2xx), `auth-required` (401/403 — reachable
   and expected without a key), `wrong-base` (404/3xx loop), `unreachable`
@@ -58,18 +58,18 @@ URLs **without registering anywhere**.
   `/api/tags`, vLLM/LM Studio `/models`) also verify model ids. No provider is
   claimed to issue a public temporary key; the docs say so explicitly. The probe
   runs in tests against mocked HTTP and never in the unit suite otherwise.
-- [ ] **AC-5 (docs a user can follow).** `docs/providers.md` has a matrix (prefix,
+- [x] **AC-5 (docs a user can follow).** `docs/providers.md` has a matrix (prefix,
   key env, base env, model examples, free tier / subscription, tools) and
   step-by-step recipes: OpenAI, Anthropic/Claude, Google Gemini, Groq, Mistral,
   OpenRouter (including the public no-key model check), local Ollama, a generic
   OpenAI-compatible endpoint, and subscriptions (Claude Pro/Max, ChatGPT/Codex,
   Copilot) via a **local LiteLLM proxy** including Copilot's device flow. Each
   recipe says where to create the key and what to put in `.env`.
-- [ ] **AC-6 (honest cost).** `usage.py` covers the supported families' current
+- [x] **AC-6 (honest cost).** `usage.py` covers the supported families' current
   prices (or names the model in `unpriced_models`), and preflight warns when a paid
   model has no price (the dollar cap cannot fire). A `make prices`/table check
   keeps the price map complete for the registry's first-class providers.
-- [ ] **AC-7 (offline tests, no behaviour change for the current profile).**
+- [x] **AC-7 (offline tests, no behaviour change for the current profile).**
   `pytest`, `ruff`, `mypy` green; the existing Go profile resolves exactly as
   before; no test makes a real network call.
 
