@@ -18,6 +18,9 @@ swarm-health: ## App tests + the e2e suite; non-zero when the stand is broken
 swarm-accept: ## Spec acceptance pass (ARGS="--no-queue --selftest")
 	$(PY) -m swarm.acceptance $(ARGS)
 
+factory-audit: ## Block a push that would publish caches, secrets or large blobs
+	$(PY) -m swarm.factory_audit
+
 swarm-preflight: ## Validate models/keys/venvs/gates before a run
 	$(PY) -m swarm.preflight
 
