@@ -14,8 +14,27 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+
+def _default_root() -> Path:
+    """The checkout root when this is a source tree, else the caller's cwd.
+
+    An installed package resolves to site-packages, where running from cwd is
+    the only sensible default (`hq` passes SWARM_TARGET explicitly, so the CLI
+    is unaffected either way; this keeps `python -m swarm.*` usable).
+    """
+    try:
+        root = Path(__file__).resolve().parents[2]
+    except IndexError:
+        return Path.cwd()
+    if (root / "pyproject.toml").is_file() and (
+        (root / "src" / "swarm").is_dir() or (root / "swarm").is_dir()
+    ):
+        return root
+    return Path.cwd()
+
+
 # Repo root of a source checkout in the factory layout: <root>/src/swarm/paths.py
-_SOURCE_ROOT = Path(__file__).resolve().parents[2]
+_SOURCE_ROOT = _default_root()
 
 
 def target_root() -> Path:

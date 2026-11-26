@@ -83,3 +83,12 @@ def test_harness_specs_come_from_the_contract(tmp_path):
     assert HARNESS_SPECS == contract.DEFAULT_HARNESS_SPECS
     _yaml(tmp_path, "harness_specs: [001-x]\n")
     assert contract.current().harness_specs == ("001-x",)
+
+
+def test_an_installed_package_defaults_to_the_cwd(monkeypatch):
+    """site-packages has no pyproject; the caller's cwd is the only sane root."""
+    from swarm import paths
+
+    monkeypatch.chdir("/tmp")
+    monkeypatch.setattr(paths, "__file__", "/tmp/hq/lib/python3.12/site-packages/swarm/paths.py")
+    assert paths._default_root() == __import__("pathlib").Path("/tmp").resolve()
