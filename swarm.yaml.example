@@ -1,0 +1,47 @@
+# swarm.yaml — what the harness needs to know about YOUR repo (048 AC-4).
+# Copy to swarm.yaml. Every key is optional; defaults are the factory's own
+# layout (specs/harness, src/, tests/) and never a neighbouring app tree.
+
+# Where your specs live (spec.md + plan.md + tasks.md per task).
+specs_dir: specs/product
+
+# What the coder may write. Directories end with "/", or name exact files.
+scope:
+  - app/
+  - frontend/
+  - tests/
+  - contracts/
+  - pyproject.toml
+
+# The gates the reviewer must show green (semicolon/newline in SWARM_GATE_COMMANDS
+# still overrides this for one run).
+gates:
+  - pytest -q
+  - ruff check .
+  - mypy app tests
+
+# Optional: which gates a delta can break (affected-gate selection). An unmapped
+# path selects every gate.
+gate_map:
+  "app/**": [pytest -q, ruff check ., mypy app tests]
+  "tests/**": [pytest -q, ruff check ., mypy app tests]
+  "frontend/**": [npm --prefix frontend run check, npm --prefix frontend run lint]
+
+# The browser suite a task naming an e2e spec must record.
+e2e:
+  command: npm --prefix frontend run test:e2e
+  specs: frontend/e2e        # brief paths under this prefix are e2e-owned
+
+# Risk labels are measurement only (cost/escape telemetry).
+risk:
+  profile: my-app
+  classes:                   # optional override of the path classes
+    1: [tests/, e2e/]
+    2: [app/, frontend/src/]
+    3: [swarm/, specs/, migrations/]
+
+# Optional integrations.
+db:
+  script: swarm/db.sh
+python:
+  venv: .venv

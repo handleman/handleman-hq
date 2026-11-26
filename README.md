@@ -1,50 +1,70 @@
-# Swarm harness — usage
+# handleman-hq — the dark factory
 
-A free-first CrewAI swarm that implements `specs/product/` tasks one at a time
-(`specs/harness/009-swarm-harness/`, hardened by `specs/harness/012-dark-factory-harness/` and the
-run guards of `specs/harness/026-run-guards/`). Each phase is a small crew with its own
-model role; a CrewAI Flow (`swarm/flow.py`) sequences them and owns every
-decision that must not be made by a model — retries, scope, green, commit.
-Green comes from gate exit codes queued by QA, never from a model's prose; the
-verifier, self-check and correction crews run under their own roles so their
-executions can never count as gate evidence.
+A spec-driven agent swarm that implements a repo's `specs/` one task at a time
+and merges each green task by itself. It is **provider-agnostic** — paid cloud,
+free cloud, or all-local Ollama, chosen entirely by `.env` — and **repo-agnostic**
+— point it at any checkout with a `swarm.yaml`.
 
-New here? Read [`docs/how-it-works.md`](docs/how-it-works.md) first: the role
-table, the phase order, one flow diagram and the invariant behind it.
-
-## Run
 ```bash
-make swarm-run                 # foreground pilot (no args = resume; or ./swarm/run.sh 001 T1)
-make swarm-local               # all-local pilot: Ollama Qwen for every role (overrides cloud .env)
-make swarm-dash                 # dashboard attached to the current pilot
-make swarm-up                   # pilot in background + dashboard attached
-make swarm-up-local             # all-local pilot in background + dashboard attached
-make swarm-test                 # harness unit tests (no LLM, no network)
-make swarm-preflight            # validate models/keys/Ollama/venvs/gates (no LLM call)
-make swarm-accept               # spec acceptance pass (final greenlight; all built product specs) — run by the supervisor after the queue drains, and automatically per-feature after each green task via swarm/flow.py
-make e2e                        # browser suite: build + fixture backend + playwright test
-# Swarm Agent Skills (044): operators add agent behaviour via YAML-frontmatter
-# skill files under swarm/agents/skills/<role>.md; auto-discovered and appended
-# to agent.skills (additive). Off switches: SWARM_SKILLS=0, SWARM_SKILLS_DIR.
-make swarm-record SPEC=014 TASK=T11  # standard trailers for a task finished by hand
-make swarm-approve             # grant approval for the last checkpoint task (or SPEC=001 TASK=T3)
-make swarm-approve SPEC=001 TASK=T3  # grant approval for a specific held task
-make swarm-coder-image          # build tuned coder image (swarm/ollama/Modelfile → swarm-coder:latest)
+pip install -e '.[dev]'          # or: pip install git+https://github.com/handleman/handleman-hq@v0.2.0
+cd your-repo
+hq init                           # writes a starter swarm.yaml
+hq preflight                      # every model id, fallback, key and gate binary
+hq run --spec 040 --task T6        # one task; green merges itself
+```
+
+## Why it exists
+
+- **Green means evidence.** A task is green only when the reviewer's recorded gate
+  exit codes are 0, the verifier passed, and the full suite was run at the final
+  delta. A model's prose never decides.
+- **Judgement gets reasoning models.** The reviewer and verifier are the roles
+  that can be wrong about evidence; cheap flash models do mechanical work.
+  See [`docs/model-usage.md`](docs/model-usage.md).
+- **Cheap per green task.** Local and `:free` models are $0 in the cost ledger; a
+  paid model without a price makes cost `None` instead of faking a number.
+- **The queue heals itself.** A red e2e suite is triaged, repaired inside its
+  scope, and re-run; a weakened spec is reverted. Deterministic guards stop a
+  loop that would burn money.
+
+## How it works
+
+Each phase is a small CrewAI crew with its own model role; a Flow sequences them
+and owns every decision that must not be made by a model — retries, scope, green,
+commit. Green comes from gate exit codes queued by QA. Read
+[`docs/how-it-works.md`](docs/how-it-works.md) first: the role table, the phase
+order, one flow diagram and the invariant behind it.
+
+## The contract (`swarm.yaml`)
+
+The target repo declares what the harness needs: `specs_dir`, `scope`, `gates`
+(and an optional affected-gate `gate_map`), `e2e`, `risk`, `db`, `python`. Missing
+keys fall back to the factory's own layout, never a neighbouring app tree. Copy
+[`swarm.yaml.example`](swarm.yaml.example) and edit.
+
+`python -m swarm.contract` prints the resolved contract; `hq preflight` validates
+the model catalogue before the first call.
+
+## Layout
+
+```
+src/swarm/          the harness (core + drivers)
+tests/              unit tests (core green without any app tree)
+docs/               one file per topic
+swarm.yaml.example  the contract, every key documented
 ```
 
 ## Documentation
 
-`docs/` holds one file per topic. The short version: read `how-it-works.md`
-once, then jump to what you need.
-
 - [`docs/how-it-works.md`](docs/how-it-works.md) — roles, phase order, the flow diagram, the invariant.
-- [`docs/setup.md`](docs/setup.md) — venv, model tiers/routing, preflight, coder image.
-- [`docs/running.md`](docs/running.md) — dashboard, resume rules, escalation, event listener.
+- [`docs/setup.md`](docs/setup.md) — venv, model tiers/routing, preflight.
+- [`docs/model-usage.md`](docs/model-usage.md) — which kind of model each role needs; **review needs reasoning**.
+- [`docs/running.md`](docs/running.md) — dashboard, resume rules, escalation.
 - [`docs/queue.md`](docs/queue.md) — how tasks are found, reopened, and added.
 - [`docs/tools-and-gates.md`](docs/tools-and-gates.md) — guarded tools and who owns gate evidence.
 - [`docs/verifier.md`](docs/verifier.md) — the read-only scenario check.
 - [`docs/run-guards.md`](docs/run-guards.md) — the deterministic stops and their off switches.
-- [`docs/e2e-self-heal.md`](docs/e2e-self-heal.md) — a red suite is triaged, repaired in-scope, and never weakened.
+- [`docs/e2e-self-heal.md`](docs/e2e-self-heal.md) — a red suite is triaged, repaired, never weakened.
 - [`docs/usage-and-budgets.md`](docs/usage-and-budgets.md) — tokens, cost, caps.
 - [`docs/unattended.md`](docs/unattended.md) — overnight runs, tuning, stashes, supervisor.
 - [`docs/risk-classes.md`](docs/risk-classes.md) — the risk label and the escape rate.
@@ -55,3 +75,15 @@ once, then jump to what you need.
 - [`docs/fix-loop.md`](docs/fix-loop.md) — tests-first, repair budget, telemetry, anti-loop guards.
 - [`docs/timing.md`](docs/timing.md) — phase timing, wall budget, timeouts, concurrency.
 - [`docs/troubleshooting.md`](docs/troubleshooting.md) — traces and what each stop means.
+- [`docs/model-usage.md`](docs/model-usage.md) — model recommendations per role.
+
+## Status
+
+**v0.2.0** — the harness is packaged and contract-driven (`src/swarm/`,
+`hq` CLI, `swarm.yaml`); the factory's own suite is green with no target tree.
+Driver relocation (browser suite/acceptance as the target's `drivers/`) and the
+full app migration land in v0.3. See `CHANGELOG.md` when present.
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).
