@@ -76,6 +76,9 @@ def _print_url(url: str) -> None:
 def _run(args: argparse.Namespace, root: Path) -> int:
     action = args.action
     if args.area == "figma":
+        if action == "status" and not contract_mod.current(root).design:
+            print(json.dumps({"configured": False}, indent=2, sort_keys=True))
+            return 0
         config = _config(root, "")
         if action == "status":
             print(json.dumps(sync.status(config), indent=2, sort_keys=True))

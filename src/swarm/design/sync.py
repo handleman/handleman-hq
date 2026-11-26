@@ -125,6 +125,8 @@ def _sync_mcp(
                 artifacts[f"design-context/{prefix}.txt"] = str(context.get("text") or "")[:200000]
             except DesignError as exc:
                 logger.debug("figma: design context unavailable for %s: %s", node, exc)
+        for cached_tool in cache.rglob("*.json"):
+            artifacts[f"mcp/{cached_tool.name}"] = cached_tool.read_text()
     file_info = {
         "key": config.file_key,
         "name": config.file_key,
