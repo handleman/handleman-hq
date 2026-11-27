@@ -82,6 +82,12 @@ def main(argv: list[str] | None = None) -> int:
         ("design", "design cache, checks and brief (057)"),
     ):
         child = sub.add_parser(name, help=text)
+        if name == "report":
+            child.add_argument(
+                "--fail-on-manual",
+                action="store_true",
+                help="exit 1 when a task was recorded by hand (release gate)",
+            )
         child.add_argument("rest", nargs=argparse.REMAINDER)
     init = sub.add_parser("init", help="write a starter swarm.yaml")
     init.add_argument("rest", nargs=argparse.REMAINDER)
@@ -105,7 +111,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "preflight":
         return _forward("swarm.preflight", args.rest, target=target)
     if args.command == "report":
-        return _forward("swarm.report", args.rest, target=target)
+        rest = list(args.rest)
+        if getattr(args, "fail_on_manual", False):
+            rest.insert(0, "--fail-on-manual")
+        return _forward("swarm.report", rest, target=target)
     if args.command == "bench":
         return _forward("swarm.drivers.bench", args.rest, target=target)
     if args.command in {"figma", "design"}:
