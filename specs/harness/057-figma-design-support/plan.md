@@ -6,7 +6,7 @@
 Figma file
   ├──(MCP, OAuth: DCR + PKCE)──► mcp SDK 1.30 · read-only tools
   └──(REST, FIGMA_TOKEN)───────► raw nodes/images/variables
-                     └──► hq design sync ──► designs/<key>/ (committed)
+                     └──► hq design sync ──► designs/<key>/ (local, gitignored)
                                                 │ IR · PNG · tokens · brief · lock
                                                 ▼
                                   planner / coder / verifier / design checks

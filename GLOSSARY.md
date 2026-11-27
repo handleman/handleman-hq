@@ -404,9 +404,10 @@ implementation against it.
 _Avoid_: Figma integration
 
 **Design cache**:
-The committed, versioned snapshot of the frames, tokens, brief and reference
-renders the run reads.
-_Avoid_: download
+The local, disposable snapshot of the frames, tokens, brief and reference
+renders the run reads; `hq design sync` rebuilds it and the target gitignores
+it.
+_Avoid_: download, committed artifact
 
 **Design IR**:
 The normalized, source-agnostic tree of a frame (bounds, layout, fills, text,

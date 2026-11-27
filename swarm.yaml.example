@@ -58,7 +58,7 @@ python:
 #   file_key: "<key from /design/<key>/...>"
 #   nodes: ["12:34"]              # allowlisted frames
 #   token_env: FIGMA_TOKEN        # REST only
-#   dir: designs
+#   dir: designs                  # local, gitignored; hq design sync rebuilds
 #   auth:
 #     timeout_s: 600
 #     open_browser: true

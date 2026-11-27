@@ -1,8 +1,10 @@
 # Design from Figma (057)
 
 The queue implements frames from Figma through **MCP with first-run OAuth** or
-the **REST API** (personal access token). Both write the same committed cache;
-the run itself reads only that cache.
+the **REST API** (personal access token). Both write the same **local, gitignored** cache; the run itself reads only that
+cache. `designs/` is rebuilt by `hq design sync` before a queue run or the
+strict acceptance; it is never committed (IR, renders, brief, lock are local
+artifacts).
 
 ## Two transports
 
@@ -27,7 +29,7 @@ design:
   file_key: "<key from /design/<key>/...>"
   nodes: ["12:34", "56:78"]     # only these frames may enter prompts
   token_env: FIGMA_TOKEN        # REST only
-  dir: designs/                 # committed cache
+  dir: designs/                 # local, gitignored
   scale: 2
   auth:
     timeout_s: 600

@@ -145,6 +145,8 @@ transport and auth state.
 **Invariants**
 
 - The run reads only the cache; Figma is contacted only by sync/auth.
+- The cache is local and gitignored (never source); sync reconstructs it from
+  the pinned file key/nodes, and the lock records the version.
 - The cache is immutable during a run; only sync writes it.
 - A lock mismatch is `design_stale`, never a silent re-fetch.
 - Only allowlisted nodes enter a prompt.

@@ -25,9 +25,10 @@ Two lanes are needed and they are deliberately different:
 - **Operator lane (OpenCode)** — interactive design exploration and one-off
   implementation through Figma's MCP server. A person is present, OAuth is fine,
   the latest tools matter more than reproducibility.
-- **Queue lane (harness)** — unattended implementation from a **committed,
-  versioned design cache** fetched by one deterministic command. No OAuth during
-  a run, no network dependency, no token in a prompt.
+- **Queue lane (harness)** — unattended implementation from a **local,
+  gitignored design cache** fetched by one deterministic command. No OAuth
+  during a run, no network dependency, no token in a prompt; `designs/` is
+  rebuilt by `hq design sync` and never committed.
 
 This spec covers both, but the harness contract only implements the queue lane;
 the operator lane is configuration + a skill in the target repo.
@@ -58,7 +59,7 @@ Facts this design relies on:
   JSON-speaking commands declared in `swarm.yaml`. `layout.py` already says a
   future Figma importer writes the same `layout.toml`.
 
-Decision (revised): **MCP for both lanes, with a committed cache.** The queue
+Decision (revised): **MCP for both lanes, with a local, gitignored cache.** The queue
 performs the same OAuth flow as the operator on first use (MCP authorization
 code + PKCE, loopback redirect, token stored 0600), then reads the design into
 the same stable IR and continues offline from the cache. The generated
@@ -69,7 +70,7 @@ token, same cache), not a degraded mode.
 ## Goals
 
 1. One command (`hq design sync`) turns an allowlisted Figma file/nodes into a
-   committed design cache (normalized IR, renders, tokens, brief, lock).
+   local design cache (normalized IR, renders, tokens, brief, lock; rebuilt by sync).
 2. The planner, coder, verifier and acceptance can implement and verify a frame
    **offline** from that cache; no OAuth, no Figma call during a run.
 3. The first Figma use in a run is an **authorization step**, not a failure:
@@ -107,7 +108,7 @@ design:
   file_key: "<key from /design/<key>/...>"
   nodes: ["12:34", "56:78"]      # allowlist; no other node may enter a prompt
   token_env: FIGMA_TOKEN         # REST fallback only; default
-  dir: designs/                  # committed cache
+  dir: designs/                  # local, gitignored
   scale: 2                       # render scale for reference PNGs
   formats: [png]                 # png|svg per frame (optional)
   max_bytes: 20000000            # per response/asset cap
@@ -250,7 +251,7 @@ A stored MCP token does not override an explicit API token. The operator can
 force either with `transport: mcp|rest` or `--transport`. Both are first-class;
 neither is deprecated.
 
-## Design cache (committed, the only thing the queue reads)
+## Design cache (local, gitignored, the only thing the queue reads)
 
 ```
 designs/<file-key>/
