@@ -85,7 +85,8 @@ done hashes, approval.
 
 `green`, `needs_human`, `preflight_failed`, `config_error`, `budget_exhausted`,
 `quota_exhausted`, `timeout`, `interrupted`, `killed`, `commit_failed`,
-`push_failed`, `merge_failed`, `awaiting_approval` (resumable).
+`push_failed`, `merge_failed`. **Resumable:** `awaiting_approval` (and a killed
+run with a checkpoint).
 
 **Invariants**
 
@@ -93,7 +94,7 @@ done hashes, approval.
   reviewer passed, and the verifier did not block.
 - A judge that cannot answer fails closed; model prose is never evidence.
 - A run cannot save a delta outside scope; out-of-scope paths are reverted.
-- `green` implies a done-ledger entry with matching hashes.
+- A green commit carries a done-ledger entry with matching hashes.
 - A typed stop records a reason code; a missing one is a defect.
 
 ### Evidence
