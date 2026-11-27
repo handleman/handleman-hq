@@ -68,6 +68,9 @@ Both write a committed design cache that the run reads offline. See
 
 ## Documentation
 
+- [`GLOSSARY.md`](GLOSSARY.md) — the factory's ubiquitous language (terms, `_Avoid_` lines).
+- [`docs/domain-model.md`](docs/domain-model.md) — contexts, aggregates, invariants, lifecycles, code map.
+- [`docs/adr/`](docs/adr/) — the hard decisions behind the model.
 - [`docs/install.md`](docs/install.md) — **install the package (pipx/venv)**, configure a target, run, upgrade.
 - [`docs/how-it-works.md`](docs/how-it-works.md) — roles, phase order, the flow diagram, the invariant.
 - [`docs/setup.md`](docs/setup.md) — venv, model tiers/routing, preflight.

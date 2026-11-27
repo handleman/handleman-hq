@@ -78,6 +78,14 @@ until they diverge. v0.4.0 released.
   check's target and fails a check that still passes; the report lists it.
   **Verified on the app: 14/14 strict + selftest, no always-passing check.**
 
+## Done — domain model (058)
+
+- `[x]` Root `GLOSSARY.md` (factory language, `_Avoid_` lines), 
+  `docs/domain-model.md` (contexts, aggregates, invariants, lifecycles, code
+  map) and ADRs 0001–0004 (published contract, green = evidence, target-owned
+  drivers, design cache/token-first). The app glossary now points here and its
+  `pilot`/`run` overload is corrected.
+
 ## Now — design support (057)
 
 The operator is preparing a Figma design. The queue implements frames from a

@@ -22,6 +22,10 @@ it consumes this package — it does not vendor it.
 - **Providers are data.** Add one row to `src/swarm/providers.py` and a recipe
   in `docs/providers.md`; never special-case a provider in the flow. An unknown
   prefix is an error (`SWARM_STRICT_PREFIXES=0` is the legacy escape hatch).
+- **Language is a contract.** The ubiquitous language is `GLOSSARY.md`; the
+  structure (contexts, aggregates, invariants, lifecycles) is
+  `docs/domain-model.md`; hard decisions are `docs/adr/`. Update them when a
+  term or invariant changes — a drifted glossary is worse than none.
 - **Spec before code.** Non-trivial changes go through
   `specs/harness/<NNN>-<name>/` (`spec.md` → `plan.md` → `tasks.md`). Small,
   isolated fixes may skip the spec.
@@ -43,6 +47,8 @@ hq --version       # the installed entry point
 ## Where to look
 
 - `README.md` — what it is, quickstart, doc index.
+- `GLOSSARY.md` — the ubiquitous language.
+- `docs/domain-model.md` and `docs/adr/` — the structure and the decisions.
 - `docs/how-it-works.md` — roles, phases, the invariant.
 - `docs/model-usage.md` — per-role model requirements.
 - `docs/run-guards.md` — every deterministic stop and its off switch.
