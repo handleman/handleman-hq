@@ -590,3 +590,110 @@ def test_location_and_geo_kinds_are_known():
 
     assert "location_denied" in CHECK_KINDS
     assert "geo_step" in CHECK_KINDS
+
+
+def _design_spec(tmp_path):
+    spec_dir = tmp_path / "specs" / "product" / "044-design"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text("- **AC-1 — Exists.** Element #x.\n")
+    (spec_dir / "tasks.md").write_text("- [x] T1: built\n")
+    (spec_dir / "acceptance.toml").write_text(
+        '[[check]]\nac = "AC-1"\nkind = "exists"\nselector = "#x"\n'
+    )
+    (spec_dir / "design.toml").write_text(
+        '[figma]\nfile_key = "abc"\nnode = "1:2"\n\n'
+        '[[token]]\nname = "--bg"\nvalue = "#ffffff"\nac = "AC-1"\n'
+    )
+    return spec_dir
+
+
+def _design_browser(spec: str, bg: str):
+    def fake(plan):
+        return {
+            "shots": {},
+            "views": {
+                "desktop": {"leaflet": True, "tiles": 3, "duplicateButtons": [], "zeroSize": 0, "overflow": False, "consoleErrors": [], "routeRequests": 0}
+            },
+            "checks": [{"spec": spec, "ac": "AC-1", "ok": True, "detail": "exists"}],
+            "design": {spec: {"desktop": {"tokens": {"--bg": bg}, "regions": {}, "screenshots": {}}}},
+        }
+    return fake
+
+
+def test_a_design_issue_is_written_to_the_fail_report(tmp_path, monkeypatch):
+    spec_dir = _design_spec(tmp_path)
+    monkeypatch.setattr("swarm.drivers.acceptance.built_product_specs", lambda repo: [spec_dir])
+    result = run(
+        repo=tmp_path,
+        queue=False,
+        build=False,
+        base_url="http://x/",
+        browser_runner=_design_browser("044-design", "#000000"),
+        commit=False,
+    )
+    assert result.verdict == "FAIL"
+    assert result.reports[0].design_issues
+    report = (spec_dir / "acceptance.md").read_text()
+    assert "Verdict: **FAIL**" in report
+    assert "design_token" in report
+
+
+def test_short_hex_and_long_hex_tokens_agree(tmp_path, monkeypatch):
+    spec_dir = _design_spec(tmp_path)
+    monkeypatch.setattr("swarm.drivers.acceptance.built_product_specs", lambda repo: [spec_dir])
+    result = run(
+        repo=tmp_path,
+        queue=False,
+        build=False,
+        base_url="http://x/",
+        browser_runner=_design_browser("044-design", "#fff"),
+        commit=False,
+    )
+    assert result.reports[0].design_issues == []
+
+
+def test_covered_by_declares_the_e2e_oracle(tmp_path, monkeypatch):
+    spec_dir = tmp_path / "specs" / "product" / "045-e2e"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text("- **AC-1 — Flow.** Map flow.\n")
+    (spec_dir / "tasks.md").write_text("- [x] T1: built\n")
+    (spec_dir / "acceptance.toml").write_text(
+        '[[covered_by]]\nac = "AC-1"\ntest = "frontend/e2e/flow.spec.ts"\n'
+    )
+    test_file = tmp_path / "frontend" / "e2e" / "flow.spec.ts"
+    test_file.parent.mkdir(parents=True)
+    test_file.write_text("// e2e\n")
+    monkeypatch.setattr("swarm.drivers.acceptance.built_product_specs", lambda repo: [spec_dir])
+    result = run(
+        repo=tmp_path,
+        queue=False,
+        build=False,
+        base_url="http://x/",
+        browser_runner=_design_browser("045-e2e", "#fff"),
+        commit=False,
+    )
+    report = result.reports[0]
+    assert report.ac_verdicts["AC-1"]["verdict"] == "e2e"
+    assert report.ac_verdicts["AC-1"]["source"] == "e2e"
+    assert report.config_errors == []
+    assert "E2E" in (spec_dir / "acceptance.md").read_text()
+
+
+def test_covered_by_missing_test_is_a_config_error(tmp_path, monkeypatch):
+    spec_dir = tmp_path / "specs" / "product" / "046-e2e-missing"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "spec.md").write_text("- **AC-1 — Flow.** Map flow.\n")
+    (spec_dir / "tasks.md").write_text("- [x] T1: built\n")
+    (spec_dir / "acceptance.toml").write_text(
+        '[[covered_by]]\nac = "AC-1"\ntest = "frontend/e2e/missing.spec.ts"\n'
+    )
+    monkeypatch.setattr("swarm.drivers.acceptance.built_product_specs", lambda repo: [spec_dir])
+    result = run(
+        repo=tmp_path,
+        queue=False,
+        build=False,
+        base_url="http://x/",
+        browser_runner=_design_browser("046-e2e-missing", "#fff"),
+        commit=False,
+    )
+    assert any("test not found" in err for err in result.reports[0].config_errors)

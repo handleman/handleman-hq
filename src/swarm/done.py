@@ -7,6 +7,7 @@ recorded in git commit trailers instead:
     Swarm-Task-Hash: <sha256 of task id+brief+ACs>
     Swarm-Spec-Hash: <sha256 of spec.md+plan.md>
     Swarm-Run: <run dir name>
+    Swarm-Manual: <reason>          # only for operator-recorded tasks
 
 A task counts as done only when both hashes still match. Editing `spec.md` or
 `plan.md` reopens it; marking `[x]` in `tasks.md` does not change either hash.
@@ -32,6 +33,8 @@ SPEC_HASH_FILES = ("spec.md", "plan.md")
 _TASK_RE = re.compile(r"^Swarm-Task:\s*(\S+)/(T\d+)\s*$", re.MULTILINE)
 _TASK_HASH_RE = re.compile(r"^Swarm-Task-Hash:\s*([0-9a-f]{8,64})\s*$", re.MULTILINE)
 _SPEC_HASH_RE = re.compile(r"^Swarm-Spec-Hash:\s*([0-9a-f]{8,64})\s*$", re.MULTILINE)
+_RUN_RE = re.compile(r"^Swarm-Run:\s*(\S+)\s*$", re.MULTILINE)
+_MANUAL_RE = re.compile(r"^Swarm-Manual:\s*(.+?)\s*$", re.MULTILINE)
 
 
 @dataclass(frozen=True)
@@ -40,6 +43,8 @@ class DoneEntry:
     spec_hash: str = ""
     run: str = ""
     source: str = "git"
+    manual: bool = False
+    manual_reason: str = ""
 
 
 def _norm(text: str) -> str:
@@ -92,6 +97,8 @@ def record_done(
     task_hash_value: str,
     spec_hash_value: str,
     run_id: str,
+    manual: bool = False,
+    manual_reason: str = "",
 ) -> None:
     """Write the local fallback cache (git trailers are written by the commit)."""
     cache = _read_cache(repo_root)
@@ -99,6 +106,8 @@ def record_done(
         "task_hash": task_hash_value,
         "spec_hash": spec_hash_value,
         "run": run_id,
+        "manual": manual,
+        "manual_reason": manual_reason,
     }
     path = _cache_path(repo_root)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -128,13 +137,24 @@ def _git_entries(repo_root: Path, limit: int = 1000) -> dict[str, DoneEntry]:
         if not mt or not mh:
             continue
         ms = _SPEC_HASH_RE.search(block)
+        run = _RUN_RE.search(block)
+        manual = _MANUAL_RE.search(block)
+        run_id = run.group(1) if run else ""
+        is_manual = bool(manual) or run_id.startswith("manual-")
         key = _key(mt.group(1), mt.group(2))
         entries.setdefault(
             key,
             DoneEntry(
                 task_hash=mh.group(1),
                 spec_hash=ms.group(1) if ms else "",
+                run=run_id,
                 source="git",
+                manual=is_manual,
+                manual_reason=(
+                    manual.group(1)
+                    if manual
+                    else ("operator completion" if run_id.startswith("manual-") else "")
+                ),
             ),
         )
     return entries
@@ -160,6 +180,8 @@ def done_entries(repo_root: Path | None = None) -> dict[str, DoneEntry]:
             spec_hash=str(rec.get("spec_hash", "")),
             run=str(rec.get("run", "")),
             source="cache",
+            manual=bool(rec.get("manual", False)),
+            manual_reason=str(rec.get("manual_reason", "")),
         )
     normalised: dict[str, DoneEntry] = {}
     for key, entry in entries.items():

@@ -119,6 +119,10 @@ layout issues, design issues, oracle results, vision notes.
 - An N/A is a declaration, not an unverified AC.
 - An always-passing check fails the spec under `--selftest`.
 - Live-only ACs are verified by the live lane and declared as such.
+- A covered-by AC names an existing e2e test; it is reported `E2E`, never as a
+  selector pass.
+- The report, the logged verdict and the exit code are computed after every
+  evidence source (design, layout, covered-by) is known.
 - The vision verdict is advisory and never flips a verdict.
 
 ### Done ledger
@@ -130,6 +134,8 @@ fallback cache.
 
 - Hash mismatch means not done, whatever `tasks.md` says.
 - The ledger is append-only for a given task/hash pair.
+- A manual entry is visible (`manual`, `manual_reason`) and a release gate can
+  refuse it; recorded-by-hand is not the same claim as swarm-green.
 
 ### Design snapshot
 

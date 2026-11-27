@@ -208,6 +208,15 @@ The durable record that a task is done: commit trailers, with a cache fallback
 for shallow history.
 _Avoid_: history, task list
 
+**Manual completion**:
+A task recorded by an operator with a reason, not by a green run; it is marked
+in the ledger and surfaced by the report.
+_Avoid_: handoff, hack, exception
+
+**Covered-by declaration**:
+An acceptance criterion proven by a named e2e test instead of a selector probe.
+_Avoid_: skipped AC, N/A (that is no browser surface)
+
 **Task hash**:
 A hash of a task's id, brief and AC refs; changing any of them makes a previous
 done entry invalid.

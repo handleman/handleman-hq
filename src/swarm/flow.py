@@ -3636,7 +3636,9 @@ class SwarmFlow(Flow[SwarmState]):
                             ):
                                 last_err = SystemExit(
                                     f"step {i} did not create or change {target} "
-                                    "(it described the file but the run delta does not contain it)"
+                                    f"(the response was {len(step_out or '')} chars; if the "
+                                    f"content is there, write {target} with the file tool; "
+                                    "the run delta does not contain it)"
                                 )
                                 print(f"step {i}: did not land {target}; retrying", flush=True)
                                 continue
@@ -5004,6 +5006,22 @@ def _resume_point(repo_root: Path) -> tuple[str, str] | None:
     return _first_open_task(repo_root, (spec_path.name, task))
 
 
+def _discard_partial_task(flow: Any) -> list[str]:
+    """Archive and revert a capped task's delta before the queue moves on (059).
+
+    015 AC-6 lets a per-task budget cap continue the queue. The cap can leave a
+    half-finished delta in the worktree; the next task would then inherit it as
+    its own (the 2026-11-27 T2 -> T3 case). Revert through the flow's own helper
+    so the content is archived under the capped run first.
+    """
+    state = getattr(flow, "state", None)
+    changed = list(getattr(state, "changed_files", []) or [])
+    revert = getattr(flow, "_revert_paths", None)
+    if not changed or not callable(revert):
+        return []
+    return list(revert(changed, reason="task cap"))
+
+
 def run_tasks(
     spec_prefix: str,
     start_task: str,
@@ -5050,7 +5068,9 @@ def run_tasks(
             if status != "green" and not task_cap:
                 return
             if task_cap:
-                # 015 AC-6: a per-task cap must not block the rest of the queue.
+                # 015 AC-6: a per-task cap must not block the rest of the queue,
+                # but it must not leak its partial delta into the next task (059).
+                _discard_partial_task(flow)
                 from swarm.supervise import mark_retry_later
 
                 mark_retry_later(f"{spec_dir}/{task_id}")

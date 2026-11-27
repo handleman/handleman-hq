@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import re
 import tomllib
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from PIL import Image, ImageChops
+from PIL import Image, ImageChops, ImageColor
 
 DEFAULT_AC = "AC-D"
 
@@ -31,6 +32,41 @@ def _norm(value: Any) -> str:
     if text.startswith("#") and len(text) in {4, 7, 9}:
         return text.lower()
     return " ".join(text.split())
+
+
+_RGB_RE = re.compile(
+    r"^rgba?\(\s*(\d{1,3})[ ,]+(\d{1,3})[ ,]+(\d{1,3})(?:\s*[,/]\s*([0-9.]+))?\s*\)$",
+    re.IGNORECASE,
+)
+
+
+def _color(value: Any) -> tuple[int, ...] | None:
+    """Parse a CSS colour into RGBA; None when the value is not a colour."""
+    text = str(value if value is not None else "").strip()
+    if not text:
+        return None
+    try:
+        rgb = ImageColor.getrgb(text)
+    except (ValueError, TypeError):
+        match = _RGB_RE.match(text)
+        if not match:
+            return None
+        rgb = tuple(int(part) for part in match.groups()[:3])
+        alpha = match.group(4)
+        if alpha is not None:
+            rgb = rgb + (round(float(alpha) * 255),)
+    if len(rgb) == 3:
+        return tuple(int(channel) for channel in rgb) + (255,)
+    return tuple(int(channel) for channel in rgb)
+
+
+def _same_value(expected: Any, actual: Any) -> bool:
+    """Compare tokens semantically: shorthand hex/rgb colours are equal."""
+    if _norm(expected) == _norm(actual):
+        return True
+    left = _color(expected)
+    right = _color(actual)
+    return left is not None and right is not None and left == right
 
 
 def _rect(value: Mapping[str, Any] | None) -> dict[str, float] | None:
@@ -73,7 +109,7 @@ def evaluate(
             issues.append(
                 {"check": "design_token", "target": name, "detail": "not found", "ac": str(entry.get("ac", DEFAULT_AC))}
             )
-        elif _norm(actual) != _norm(expected):
+        elif not _same_value(expected, actual):
             issues.append(
                 {
                     "check": "design_token",

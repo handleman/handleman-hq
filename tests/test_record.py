@@ -118,3 +118,18 @@ def test_the_hash_matches_what_the_queue_would_compute(tmp_path, monkeypatch):
     entry = done_entries(repo)["014-walking-guide/T2"]
     assert entry.task_hash == task_hash(task)
     assert entry.spec_hash == spec_plan_hash(spec)
+
+def test_the_message_names_the_manual_reason():
+    body = record_mod.message(
+        "014-walking-guide", "T11", "a" * 64, "b" * 64, "20260101-000000", "approved fix"
+    )
+    assert "Swarm-Manual: approved fix" in body
+
+
+def test_record_marks_the_entry_manual_with_a_reason(tmp_path, monkeypatch):
+    repo, _spec = _repo(tmp_path)
+    _patch_root(monkeypatch, repo)
+    assert record_mod.record("014", "T2", reason="approved operator fix") == 0
+    entry = done_entries(repo)["014-walking-guide/T2"]
+    assert entry.manual is True
+    assert entry.manual_reason == "approved operator fix"

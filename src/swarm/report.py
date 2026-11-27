@@ -192,14 +192,33 @@ def render(summary: dict[str, Any]) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    import argparse
+
     from swarm import escape
+    from swarm.done import done_entries
+
+    ap = argparse.ArgumentParser(description="Cost/autonomy ledger dashboard (015/024)")
+    ap.add_argument(
+        "--fail-on-manual",
+        action="store_true",
+        help="exit 1 when a task was recorded by hand (release gate)",
+    )
+    args = ap.parse_args(argv or [])
 
     rows = collect()
     print(render(summarize(rows)))
     result = escape.rate(rows)
     if result["merged"]:
         print(escape.render(result))
-    return 0
+
+    entries = done_entries()
+    manual = sorted(key for key, entry in entries.items() if entry.manual)
+    if entries:
+        print(f"manual completions: {len(manual)}/{len(entries)}")
+        for key in manual:
+            reason = entries[key].manual_reason or "operator completion"
+            print(f"  {key:<40} {reason}")
+    return 1 if args.fail_on_manual and manual else 0
 
 
 if __name__ == "__main__":

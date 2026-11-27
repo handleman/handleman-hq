@@ -277,3 +277,45 @@ def _real_git(repo, args):
 
     p = subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=False)
     return p.returncode, (p.stdout + p.stderr)[-500:]
+
+def test_legacy_manual_run_prefix_is_marked(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init(repo)
+    task = _task()
+    _commit_with_trailer(repo, "001-example-app", "T3", task_hash(task), "a" * 64, run="manual-1")
+    entry = done_entries(repo)["001-example-app/T3"]
+    assert entry.manual is True
+    assert entry.manual_reason == "operator completion"
+
+
+def test_explicit_manual_trailer_is_marked(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init(repo)
+    task = _task()
+    (repo / "x.txt").write_text("x")
+    _git(repo, "add", "-A")
+    msg = (
+        "swarm: 001-example-app-T3 green\n\n"
+        f"Swarm-Task: 001-example-app/T3\nSwarm-Task-Hash: {task_hash(task)}\n"
+        "Swarm-Spec-Hash: " + "a" * 64 + "\nSwarm-Run: run-1\n"
+        "Swarm-Manual: emergency release\n"
+    )
+    _git(repo, "commit", "-q", "-m", msg)
+    entry = done_entries(repo)["001-example-app/T3"]
+    assert entry.manual is True
+    assert entry.manual_reason == "emergency release"
+
+
+def test_cache_records_manual_metadata(tmp_path):
+    repo = tmp_path / "repo"
+    (repo / "swarm" / "runs").mkdir(parents=True)
+    record_done(
+        repo, "001-example-app", "T3",
+        task_hash_value="h" * 64, spec_hash_value="s" * 64,
+        run_id="manual-1", manual=True, manual_reason="by hand",
+    )
+    entry = done_entries(repo)["001-example-app/T3"]
+    assert entry.manual is True
+    assert entry.manual_reason == "by hand"

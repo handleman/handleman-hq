@@ -139,3 +139,19 @@ boundary**: later checks can read state an earlier one produced, but an
 interaction in one spec never leaks into the next. `--strict` fails an AC with
 neither a check nor a `[[not_applicable]]` declaration, and `--selftest` mutates
 each target to prove the check can fail.
+
+### Covered-by e2e (059)
+
+An acceptance criterion whose real oracle is a browser scenario (a map pick,
+a drag, a delayed spinner) declares it instead of hiding it:
+
+```toml
+[[covered_by]]
+ac = "AC-1"
+test = "frontend/e2e/build-route.spec.ts"
+```
+
+The acceptance report shows the AC as **E2E**, the strict pass treats it as
+covered, and the run validates that the test file exists under the target root.
+The e2e suite is still the gate that executes it; the declaration only makes the
+oracle honest and addressable.

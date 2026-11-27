@@ -12,6 +12,7 @@ an **empty** commit carrying exactly the standard trailers:
     Swarm-Task-Hash: <sha256 of id+brief+ACs>
     Swarm-Spec-Hash: <sha256 of spec.md+plan.md>
     Swarm-Run: manual-<timestamp>
+    Swarm-Manual: <reason>
 
 It never touches the working tree and never edits `specs/` (the done ledger is
 the source of truth; `tasks.md` stays yours to tick).
@@ -35,7 +36,14 @@ def _git(*args: str) -> tuple[int, str]:
     return p.returncode, (p.stdout + p.stderr).strip()
 
 
-def message(spec_id: str, task_id: str, task_hash: str, spec_hash: str, stamp: str) -> str:
+def message(
+    spec_id: str,
+    task_id: str,
+    task_hash: str,
+    spec_hash: str,
+    stamp: str,
+    reason: str = "operator completion",
+) -> str:
     """The commit message the green path writes, marked as a manual record."""
     return (
         f"swarm: {spec_id}-{task_id} recorded manually\n\n"
@@ -43,6 +51,7 @@ def message(spec_id: str, task_id: str, task_hash: str, spec_hash: str, stamp: s
         f"Swarm-Task-Hash: {task_hash}\n"
         f"Swarm-Spec-Hash: {spec_hash}\n"
         f"Swarm-Run: manual-{stamp}\n"
+        f"Swarm-Manual: {reason}\n"
     )
 
 
@@ -52,6 +61,7 @@ def record(
     *,
     commit: bool = True,
     dry_run: bool = False,
+    reason: str = "operator completion",
 ) -> int:
     from swarm.done import record_done, spec_plan_hash, task_hash
     from swarm.spec_loader import load_spec_tasks, spec_dir_name, task_key
@@ -70,7 +80,7 @@ def record(
     spec_hash_value = spec_plan_hash(spec_path)
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     key = task_key(REPO_ROOT, spec, str(task.id))
-    body = message(spec_id, str(task.id), hash_value, spec_hash_value, stamp)
+    body = message(spec_id, str(task.id), hash_value, spec_hash_value, stamp, reason)
 
     print(f"record {key}")
     print(f"  task hash {hash_value[:16]}…  spec hash {spec_hash_value[:16]}…")
@@ -86,6 +96,8 @@ def record(
         task_hash_value=hash_value,
         spec_hash_value=spec_hash_value,
         run_id=f"manual-{stamp}",
+        manual=True,
+        manual_reason=reason,
     )
     print("  ledger cache updated (swarm/runs/done.json)")
     if not commit:
@@ -111,8 +123,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("task", help="task id (e.g. T11, or 11)")
     ap.add_argument("--no-commit", action="store_true", help="update the cache only")
     ap.add_argument("--dry-run", action="store_true", help="print the message, change nothing")
+    ap.add_argument("--reason", default="operator completion", help="why this task was completed by hand")
     args = ap.parse_args(argv)
-    return record(args.spec, args.task, commit=not args.no_commit, dry_run=args.dry_run)
+    return record(
+        args.spec,
+        args.task,
+        commit=not args.no_commit,
+        dry_run=args.dry_run,
+        reason=args.reason,
+    )
 
 
 if __name__ == "__main__":

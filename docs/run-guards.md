@@ -76,3 +76,22 @@ cheap answer is almost always available before a judge is paid:
 - **Delta completeness stays a stop, not a gate.** `delta_incomplete` is
   promoted to a gate only after the replay set agrees; the verifier still judges
   behaviour.
+
+- **Task-cap delta isolation** (059): when a per-task budget cap continues the
+  queue (015 AC-6), `run_tasks` archives and reverts the capped task's
+  `changed_files` before the next task starts. T2 once exhausted its cap after
+  writing components but before wiring `App.svelte`; T3 then ran on that partial
+  tree and its verifier blocked a dead component. The queue still continues; it
+  just no longer inherits the delta.
+- **Evidence before the report** (059): design checks, global/layout failures
+  and `covered_by` declarations are evaluated **before** `write_report` and the
+  fix-task queue. The acceptance `.md`, the logged verdict and the exit code are
+  computed from the same report. CSS colour tokens compare semantically
+  (`#fff` = `#ffffff`).
+- **Covered-by e2e** (059): `[[covered_by]] ac = "AC-1" test =
+  "frontend/e2e/x.spec.ts"` is a checked declaration, not a silent N/A. The
+  test path must exist under the target root; the AC reports `E2E` and does not
+  pretend a selector ran. `--strict` still fails a missing declaration.
+- **A coder that does not land a file is diagnosable** (059): the step retry
+  names the missing target, the response length and the write action, so a
+  six-step plan that only pasted the file cannot masquerade as a no-delta.

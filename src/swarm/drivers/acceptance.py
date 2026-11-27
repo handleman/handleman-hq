@@ -115,6 +115,7 @@ class SpecReport:
     shots: dict[str, str] = field(default_factory=dict)
     queued: list[str] = field(default_factory=list)
     not_applicable: dict[str, str] = field(default_factory=dict)
+    covered_by: dict[str, str] = field(default_factory=dict)
     config_errors: list[str] = field(default_factory=list)
     oracle: list[dict[str, str]] = field(default_factory=list)
     design_issues: list[dict[str, str]] = field(default_factory=list)
@@ -141,7 +142,7 @@ class SpecReport:
 
     @property
     def counts(self) -> dict[str, int]:
-        out = {"pass": 0, "fail": 0, "unverified": 0, "n/a": 0}
+        out = {"pass": 0, "fail": 0, "unverified": 0, "n/a": 0, "e2e": 0}
         for entry in self.ac_verdicts.values():
             out[entry.get("verdict", "unverified")] = (
                 out.get(entry.get("verdict", "unverified"), 0) + 1
@@ -165,6 +166,15 @@ class SpecReport:
                 }
             )
         out.extend(self.layout_failures)
+        for issue in self.design_issues:
+            out.append(
+                {
+                    "ac": str(issue.get("ac", "AC-D")),
+                    "title": str(issue.get("target", "")),
+                    "evidence": str(issue.get("detail", "")),
+                    "file": "",
+                }
+            )
         return out
 
 
@@ -313,6 +323,33 @@ def load_not_applicable(spec_dir: Path) -> dict[str, str]:
     return out
 
 
+def load_covered_by(spec_dir: Path) -> dict[str, str]:
+    """ACs a spec declares to be proven by a named e2e spec (059).
+
+    `[[covered_by]] ac = "AC-1" test = "frontend/e2e/x.spec.ts"` is a
+    declaration, not a selector check. The queued e2e suite is the oracle; the
+    acceptance report must name it and the run validates the file exists.
+    """
+    import tomllib
+
+    path = Path(spec_dir) / "acceptance.toml"
+    if not path.exists():
+        return {}
+    try:
+        data = tomllib.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+    out: dict[str, str] = {}
+    for raw in data.get("covered_by", []) or []:
+        if not isinstance(raw, Mapping):
+            continue
+        ac = str(raw.get("ac", "")).strip()
+        test = str(raw.get("test", "")).strip()
+        if ac and test:
+            out[ac] = test
+    return out
+
+
 def load_criteria(spec_dir: Path) -> list[Criterion]:
     try:
         text = (spec_dir / "spec.md").read_text()
@@ -408,7 +445,14 @@ def evaluate_spec(
         shots={str(k): str(v) for k, v in (shots or {}).items()},
     )
     report.global_failures = global_failures(views)
-    report.ac_verdicts = merge_ac_verdicts(criteria, checks, results, report.vision)
+    report.covered_by = load_covered_by(spec_dir)
+    for ac, test in report.covered_by.items():
+        report.ac_verdicts[ac] = {"verdict": "e2e", "evidence": test, "source": "e2e"}
+    report.ac_verdicts.update(merge_ac_verdicts(criteria, checks, results, report.vision))
+    # merge_ac_verdicts fills every criterion; put the e2e declarations back
+    # over the "unverified" placeholder they would otherwise replace.
+    for ac, test in report.covered_by.items():
+        report.ac_verdicts[ac] = {"verdict": "e2e", "evidence": test, "source": "e2e"}
     return report
 
 
@@ -451,7 +495,8 @@ def render_report(report: SpecReport, *, generated: str | None = None) -> str:
         (
             f"Generated: {generated} · Verdict: **{report.verdict}** "
             f"({counts['fail']} failed · {counts['pass']} passed · "
-            f"{counts['unverified']} unverified · {counts['n/a']} n/a)"
+            f"{counts['unverified']} unverified · {counts['n/a']} n/a · "
+            f"{counts['e2e']} e2e)"
         ),
         "",
         "| AC | Verdict | Source | Evidence |",
@@ -1075,11 +1120,52 @@ def run(
         report.not_applicable = load_not_applicable(spec_dir)
         for ac, note in report.not_applicable.items():
             report.ac_verdicts[ac] = {"verdict": "n/a", "evidence": note, "source": "declared"}
-        covered = {check.ac for check in report.checks} | set(report.not_applicable)
+        report.covered_by = load_covered_by(spec_dir)
+        for ac, test in report.covered_by.items():
+            report.ac_verdicts[ac] = {"verdict": "e2e", "evidence": test, "source": "e2e"}
+            test_path = (root / test).resolve()
+            try:
+                test_path.relative_to(root.resolve())
+            except ValueError:
+                report.config_errors.append(
+                    f"covered_by {ac}: test path escapes the target: {test}"
+                )
+                continue
+            if not test_path.is_file():
+                report.config_errors.append(
+                    f"covered_by {ac}: test not found: {test}"
+                )
+        # 059: design issues are evidence too. Evaluate them before the report
+        # and the fix-task queue so the .md and the exit code cannot disagree.
+        try:
+            table = _design_checks.load_checks(spec_dir)
+        except _design_checks.DesignCheckError as exc:
+            report.config_errors.append(f"design: {exc}")
+            table = None
+        if table:
+            frame = str((table.get("screenshot") or {}).get("frame", "desktop"))
+            facts = ((browser.get("design") or {}).get(spec_dir.name) or {}).get(frame) or {}
+            if facts:
+                report.design_issues = _design_checks.evaluate(table, facts, root=root)
+            else:
+                report.design_issues = [
+                    {
+                        "check": "design_facts",
+                        "target": spec_dir.name,
+                        "detail": "no design facts recorded",
+                        "ac": "AC-D",
+                    }
+                ]
+        covered = (
+            {check.ac for check in report.checks}
+            | set(report.not_applicable)
+            | set(report.covered_by)
+        )
         uncovered = [c.id for c in report.criteria if c.id not in covered]
         if uncovered:
             report.config_errors.append(
-                f"no acceptance.toml check or not_applicable entry for {', '.join(uncovered)}"
+                f"no acceptance.toml check, covered_by or not_applicable entry for "
+                f"{', '.join(uncovered)}"
             )
             log(f"acceptance: {report.spec} config: no check for {', '.join(uncovered)}")
         artifacts.append(write_report(spec_dir, report))
@@ -1095,33 +1181,13 @@ def run(
                 tasks_path.write_text(new_text)
                 artifacts.append(tasks_path)
                 report.queued = [line.split(" ", 2)[2][:120] for line in added]
-        try:
-            table = _design_checks.load_checks(spec_dir)
-        except _design_checks.DesignCheckError as exc:
-            report.config_errors.append(f"design: {exc}")
-            table = None
-        if table:
-            frame = str((table.get("screenshot") or {}).get("frame", "desktop"))
-            facts = ((browser.get("design") or {}).get(spec_dir.name) or {}).get(frame) or {}
-            if facts:
-                report.design_issues = _design_checks.evaluate(
-                    table, facts, root=root
-                )
-            else:
-                report.design_issues = [
-                    {
-                        "check": "design_facts",
-                        "target": spec_dir.name,
-                        "detail": "no design facts recorded",
-                        "ac": "AC-D",
-                    }
-                ]
         reports.append(report)
         counts = report.counts
         log(
             f"acceptance: {report.spec} → {report.verdict} "
             f"({counts['fail']} failed, {counts['pass']} passed, "
-            f"{counts['unverified']} unverified · {counts['n/a']} n/a)"
+            f"{counts['unverified']} unverified · {counts['n/a']} n/a · "
+            f"{counts['e2e']} e2e)"
         )
 
     verdict = (

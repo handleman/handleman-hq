@@ -344,3 +344,11 @@ def test_auto_uses_mcp_without_the_api_token(monkeypatch, tmp_path):
     monkeypatch.delenv("TEST_FIGMA_TOKEN", raising=False)
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "state"))
     assert choose_transport(_config()) == "mcp"
+
+
+def test_design_tokens_compare_colours_semantically():
+    table = {"token": [{"name": "--bg", "value": "#ffffff", "ac": "AC-1"}]}
+    assert checks.evaluate(table, {"tokens": {"--bg": "#fff"}}, root=Path(".")) == []
+    assert checks.evaluate(
+        table, {"tokens": {"--bg": "rgb(255, 255, 255)"}}, root=Path(".")
+    ) == []

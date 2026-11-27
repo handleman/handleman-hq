@@ -81,3 +81,12 @@ and the host UID.
   on the host. Opt in with `SWARM_SANDBOX_ALLOW_COMMIT=1`; for SSH remotes also set
   `SWARM_SANDBOX_SSH=1` to mount `~/.ssh` read-only.
 - `SWARM_SANDBOX_NO_BUILD=1` reuses the last image; `SWARM_SANDBOX_IMAGE` renames it.
+
+## Manual completion is visible (059)
+
+`swarm.record` / `make swarm-record SPEC=<dir> TASK=<Tn> --reason "<why>"` writes
+an empty commit with `Swarm-Manual: <why>` beside the standard trailers. The
+done ledger carries `manual`/`manual_reason`; legacy `Swarm-Run: manual-…`
+entries are recognised too. `hq report` prints the manual share, and
+`hq report --fail-on-manual` exits non-zero for a release gate. A feature task
+recorded by hand still counts as done, but it can no longer look swarm-built.

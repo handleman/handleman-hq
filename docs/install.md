@@ -16,19 +16,19 @@ a `.env`, and its own tests. You do **not** copy `src/swarm/` into the app.
 Recommended (isolated, global `hq`):
 
 ```bash
-pipx install "git+https://github.com/handleman/handleman-hq@v0.6.5"
-hq --version        # hq 0.6.5
+pipx install "git+https://github.com/handleman/handleman-hq@v0.6.6"
+hq --version        # hq 0.6.6
 ```
 
 Or in its own venv:
 
 ```bash
 python3.12 -m venv ~/.venvs/hq
-~/.venvs/hq/bin/pip install "git+https://github.com/handleman/handleman-hq@v0.6.5"
+~/.venvs/hq/bin/pip install "git+https://github.com/handleman/handleman-hq@v0.6.6"
 ~/.venvs/hq/bin/hq --version
 ```
 
-Add the dev tools for a source checkout: `"handleman-hq[dev] @ git+https://…@v0.6.5"`.
+Add the dev tools for a source checkout: `"handleman-hq[dev] @ git+https://…@v0.6.6"`.
 The package is currently installed from the tagged GitHub release; use a newer
 tag when upgrading.
 

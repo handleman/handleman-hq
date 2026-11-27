@@ -86,6 +86,14 @@ until they diverge. v0.4.0 released.
   drivers, design cache/token-first). The app glossary now points here and its
   `pilot`/`run` overload is corrected.
 
+## Done — harness integrity (059)
+
+- `[x]` 059: manual completions carry a reason and a report gate; a per-task
+  budget cap reverts its delta before the queue continues; design issues are
+  evaluated before the acceptance report and colours compare semantically; a
+  `covered_by` e2e declaration is validated and reported; a coder that never
+  lands the named file is diagnosable.
+
 ## Now — design support (057)
 
 The operator is preparing a Figma design. The queue implements frames from a
