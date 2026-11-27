@@ -95,3 +95,10 @@ cheap answer is almost always available before a judge is paid:
 - **A coder that does not land a file is diagnosable** (059): the step retry
   names the missing target, the response length and the write action, so a
   six-step plan that only pasted the file cannot masquerade as a no-delta.
+
+- **Work-type caps** (060): e2e and visual/screenshot tasks get a 2× profile of
+  the coding caps (tokens, total cost/runtime, per-task cost/seconds and the
+  wall). The e2e p90 cost is 4.1× the coding p90 and the max is 10.9×; a single
+  coding cap blocked a 2.16M-token e2e task and the 1800s visual wall. Coding is
+  unchanged; `SWARM_E2E_CAP_MULTIPLIER`/`SWARM_VISUAL_CAP_MULTIPLIER` override
+  the 2× (never below 1×), and `run.json.budget` records the profile.

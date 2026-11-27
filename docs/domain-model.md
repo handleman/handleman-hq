@@ -160,6 +160,8 @@ Role → primary model + fallback; provider registry; strict prefixes.
 - Judgement roles (reviewer, verifier) need reasoning models.
 - An unknown provider prefix is an error unless the legacy escape is set.
 - Costs are numbers or explicitly unknown, never a fake zero.
+- An e2e/visual task gets the 2× budget profile; the run records which profile
+  and multiplier applied, so a cap stop is attributable.
 
 ## Lifecycles
 

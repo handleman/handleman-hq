@@ -361,6 +361,11 @@ _Avoid_: jail
 The provider/role mix a run uses, chosen entirely by the operator's environment.
 _Avoid_: config, settings
 
+**Task budget profile**:
+The multiplier applied to a task's caps by its work type — coding, e2e or
+visual/screenshot.
+_Avoid_: model profile (that is the provider mix), quota
+
 **Fallback**:
 The model tried when a role's primary model is unavailable or fails; every role
 may declare one.

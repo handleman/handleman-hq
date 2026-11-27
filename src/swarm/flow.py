@@ -1256,6 +1256,40 @@ class SwarmFlow(Flow[SwarmState]):
         # make the loop stop merging (see docs/risk-classes.md).
         # 022 AC-2: a task cannot outlive its wall budget (0 disables).
         self._wall_budget = env_int("SWARM_TASK_WALL_BUDGET", 1800)
+        # 060: e2e and visual/screenshot tasks are the expensive tail; scale the
+        # six caps and the wall by the profile (coding stays 1.0). The brief is
+        # loaded before any model call.
+        from swarm import budget as _budget
+
+        brief = ""
+        spec_name = self._spec_dir
+        try:
+            from swarm.spec_loader import load_spec_tasks
+
+            spec_path, tasks = load_spec_tasks(REPO_ROOT, self._spec_dir, self._task_id)
+            spec_name = spec_path.name
+            task = next((t for t in tasks if str(t.id) == self._task_id), None)
+            brief = str(task.brief) if task else ""
+        except Exception:  # noqa: S110 - a missing spec is reported by the flow
+            pass
+        self._cap_profile = _budget.task_profile(brief, spec_name)
+        self._cap_multiplier = _budget.profile_multiplier(self._cap_profile)
+        if self._cap_multiplier != 1.0:
+            caps = _budget.scaled_caps(
+                tokens=self._max_tokens,
+                cost=self._max_cost,
+                seconds=self._max_seconds,
+                cost_task=self._max_cost_task,
+                seconds_task=self._max_seconds_task,
+                wall=self._wall_budget,
+                multiplier=self._cap_multiplier,
+            )
+            self._max_tokens = caps["tokens"]
+            self._max_cost = caps["cost"]
+            self._max_seconds = caps["seconds"]
+            self._max_cost_task = caps["cost_task"]
+            self._max_seconds_task = caps["seconds_task"]
+            self._wall_budget = caps["wall"]
         # 021 AC-6: the code-round budget is a knob (the suite tests 3 vs 4);
         # verdict/evidence rounds have their own small cap.
         from swarm.crew import MAX_FIX_ROUNDS
@@ -4485,6 +4519,8 @@ class SwarmFlow(Flow[SwarmState]):
             ),
             "usage": usage,
             "budget": {
+                "profile": getattr(self, "_cap_profile", "coding"),
+                "cap_multiplier": getattr(self, "_cap_multiplier", 1.0),
                 "max_tokens": self._max_tokens,
                 "max_cost_usd": self._max_cost,
                 "max_runtime_seconds": self._max_seconds,

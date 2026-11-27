@@ -228,3 +228,15 @@ Coder image: `ollama/Modelfile` (`FROM qwen3.5:9b`, temp 0, `num_ctx 65536`,
 baked SYSTEM discipline). Use it via `SWARM_CODER_MODEL=ollama/swarm-coder:latest`.
 Verified 2026-10-10: builds offline from local blobs, native tool calls work
 (with the harness's `think:false`). Tune `num_ctx`/SYSTEM in the Modelfile and rebuild.
+
+### Task budget profiles (060)
+
+The per-task caps are classified by work type: **coding** (base), **e2e** and
+**visual** (screenshot/design/acceptance tasks). e2e/visual scale the six caps
+by 2.0 by default: `SWARM_MAX_TOKENS`, `SWARM_MAX_COST_USD`,
+`SWARM_MAX_RUNTIME_SECONDS`, `SWARM_MAX_COST_PER_TASK`,
+`SWARM_MAX_SECONDS_PER_TASK` and `SWARM_TASK_WALL_BUDGET`. The evidence (p90/max
+of the app's 180 coding, 47 e2e and 15 visual runs) is in
+[`specs/harness/060-task-budgets/evidence.md`](../specs/harness/060-task-budgets/evidence.md).
+Override with `SWARM_E2E_CAP_MULTIPLIER` / `SWARM_VISUAL_CAP_MULTIPLIER` (floor
+1.0); `run.json.budget.profile` and `cap_multiplier` record what ran.

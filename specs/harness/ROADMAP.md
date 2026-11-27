@@ -86,6 +86,12 @@ until they diverge. v0.4.0 released.
   drivers, design cache/token-first). The app glossary now points here and its
   `pilot`/`run` overload is corrected.
 
+## Done — task budget profiles (060)
+
+- `[x]` 060: e2e and visual/screenshot tasks get a 2× budget profile (tokens,
+  cost, runtime, per-task caps, wall), classified from the brief/spec and
+  recorded in `run.json.budget`; evidence and env knobs documented.
+
 ## Done — harness integrity (059)
 
 - `[x]` 059: manual completions carry a reason and a report gate; a per-task
