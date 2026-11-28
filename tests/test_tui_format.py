@@ -99,7 +99,12 @@ def test_format_metrics_says_a_free_local_run_has_no_token_or_cost_cap():
     assert "1.7M" in text
 
 
-def test_format_metrics_still_shows_caps_for_a_paid_run():
+def test_format_metrics_still_shows_caps_for_a_paid_run(monkeypatch):
+    # The panel reads the ambient caps; a developer `.env` or the harness venv
+    # living inside a target must not change this formatting test.
+    monkeypatch.setenv("SWARM_MAX_TOKENS", "2000000")
+    monkeypatch.setenv("SWARM_MAX_COST_USD", "3")
+    monkeypatch.setenv("SWARM_MAX_RUNTIME_SECONDS", "7200")
     payload = {
         "usage": {"total_tokens": 15_000, "cost_usd": 0.02, "duration_seconds": 125},
         "budget": {"free_local_run": False, "local_coder": False},

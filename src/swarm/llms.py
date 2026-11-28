@@ -153,6 +153,13 @@ ALL_MODEL_VARS: tuple[str, ...] = (
     "SWARM_ACCEPT_FALLBACK_MODEL",
     "SWARM_CONFLICT_FALLBACK_MODEL",
     "SWARM_LOCAL_FALLBACK_MODEL",
+    # 061: v2 aliases; unset means "inherit the compat id".
+    "SWARM_IMPLEMENTER_MODEL",
+    "SWARM_AUDITOR_MODEL",
+    "SWARM_ESCALATION_MODEL",
+    "SWARM_IMPLEMENTER_FALLBACK_MODEL",
+    "SWARM_AUDITOR_FALLBACK_MODEL",
+    "SWARM_ESCALATION_FALLBACK_MODEL",
 )
 
 
@@ -210,6 +217,14 @@ def verifier_model(env: Mapping[str, str] | None = None) -> str:
 
 def _primary_model(role: str, env_var: str) -> str:
     primary = os.getenv(env_var, "").strip()
+    if not primary:
+        from swarm.model_config import ROLES
+
+        spec = next((r for r in ROLES if r.name == role), None)
+        for compat_var in (spec.compat if spec else ()):
+            primary = os.getenv(compat_var, "").strip()
+            if primary:
+                break
     if not primary and role == "verifier":
         primary = os.getenv("SWARM_SENIOR_MODEL", "").strip()
     return primary
@@ -572,6 +587,76 @@ def senior_llm(*, allow_paid: bool | None = None) -> LLM:
         temperature=0,
         allow_paid=_paid_ok(allow_paid),
         timeout=_fix_timeout(),
+    )
+
+
+def _v2_llm(
+    primary_var: str,
+    compat: tuple[str, ...],
+    *,
+    temperature: float = 0,
+    allow_paid: bool | None = None,
+    timeout: int | None = None,
+) -> LLM:
+    """Build a v2 alias role from its own id or the first set compat id.
+
+    `SWARM_IMPLEMENTER_MODEL` falls back to `SWARM_CODER_MODEL`, `auditor` to the
+    verifier/reviewer/senior brain and `escalation` to `SWARM_SENIOR_MODEL`. A
+    per-role fallback switch (`activate_fallbacks("SWARM_CODER_MODEL")`) follows
+    the source id, so an existing profile keeps its fallback chain.
+    """
+    model = os.getenv(primary_var, "").strip()
+    switch_key = primary_var
+    if not model:
+        for compat_var in compat:
+            model = os.getenv(compat_var, "").strip()
+            if model:
+                switch_key = compat_var
+                break
+    if not model:
+        raise RuntimeError(
+            f"{primary_var} (or one of {', '.join(compat)}) is not set; "
+            "copy .env.example to .env and set every SWARM_*_MODEL."
+        )
+    if fallbacks_active(switch_key) or fallbacks_active(primary_var):
+        model = fallback_model(switch_key, allow_paid=bool(_paid_ok(allow_paid))) or model
+    return _build(
+        model,
+        temperature=temperature,
+        allow_paid=bool(_paid_ok(allow_paid)),
+        timeout=timeout or _fix_timeout(),
+    )
+
+
+def implementer_llm(*, escalated: bool = False) -> LLM:
+    """061 v2 implementer; `escalated` swaps to the stronger tier."""
+    if escalated:
+        return _v2_llm(
+            "SWARM_ESCALATION_MODEL",
+            ("SWARM_SENIOR_MODEL",),
+            temperature=0,
+            allow_paid=True,
+        )
+    return _v2_llm(
+        "SWARM_IMPLEMENTER_MODEL",
+        ("SWARM_CODER_MODEL",),
+        temperature=0,
+        allow_paid=True,
+    )
+
+
+def auditor_llm(*, allow_paid: bool | None = None) -> LLM:
+    """061 v2 auditor: one read-only judge for gates + scenario.
+
+    The alias defaults to the verifier, then the reviewer, then the senior
+    brain, so an existing profile needs no new id. Free by default; a paid id
+    needs SWARM_ALLOW_PAID=1 like every judgement role.
+    """
+    return _v2_llm(
+        "SWARM_AUDITOR_MODEL",
+        ("SWARM_VERIFIER_MODEL", "SWARM_REVIEWER_MODEL", "SWARM_SENIOR_MODEL"),
+        temperature=0,
+        allow_paid=_paid_ok(allow_paid),
     )
 
 

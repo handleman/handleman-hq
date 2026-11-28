@@ -10,6 +10,12 @@
 **Mechanical work gets a fast, cheap model. Judgement gets a reasoning-capable
 model.**
 
+> **v2 note (061):** the default flow has three model jobs — implementer
+> (mechanical/high volume), escalation tier (strongest, rare) and auditor
+> (judgement). The planner/reviewer/verifier rows below describe the v1 rollback;
+> the rule and the evidence still apply: give the **auditor** a reasoning model
+> from a different family than the implementer.
+
 The harness optimises **cost per green task**, not cost per token. A cheap model
 that writes code in 90 seconds is a bargain; a cheap model that blocks a correct
 run, or passes a wrong one, costs a fix round, a wall-clock hour, and sometimes a
@@ -17,15 +23,14 @@ whole night. Those are not the same kind of purchase.
 
 | Role | Class | What it actually does | Model requirement |
 | --- | --- | --- | --- |
-| Planner | mechanical | turns one brief into ordered steps | fast, tool-capable, instruction-following |
-| Coder | mechanical (high volume) | writes/edits code for one step | fast, strong at code, tool-calling; the bulk-token role |
+| Implementer | mechanical (high volume) | owns the whole task: plans, writes code and tests | fast, strong at code, tool-calling; the bulk-token role |
+| Escalation tier | judgement (rare) | re-runs the implementer prompt after a rejected round | strongest available; rare, so cost is amortised |
+| **Auditor** | **judgement** | judges gates + delta + scenario in one pass | **reasoning**, long-context reading; different family from the implementer |
 | Conflict / stash resolver | mechanical | reconciles two known diffs | fast, code-aware |
 | Style/format fixes | mechanical | runs the linter and applies it | irrelevant (harness-driven) |
-| **Reviewer / QA** | **judgement** | decides green vs blocked from gate evidence | **reasoning**; must not invent failures or excuse them |
-| **Verifier** | **judgement** | reads the whole scenario, finds what gates miss | **reasoning**, long-context reading |
-| **Senior (escalation)** | **judgement** | fixes what two rounds could not | strongest available; rare, so cost is amortised |
-| Acceptance vision | advisory | looks at screenshots | vision-capable; never the sole gate |
-| Conflict *judgement* (senior path) | judgement | same as senior | reasoning |
+| Planner (v1) | mechanical | turns one brief into ordered steps | fast, tool-capable, instruction-following |
+| **Reviewer / QA (v1)** | **judgement** | decides green vs blocked from gate evidence | **reasoning**; must not invent failures or excuse them |
+| **Verifier (v1)** | **judgement** | reads the whole scenario, finds what gates miss | **reasoning**, long-context reading |
 
 ## Why review needs reasoning (the record)
 

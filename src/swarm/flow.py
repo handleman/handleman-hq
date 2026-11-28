@@ -69,6 +69,10 @@ class SwarmState(BaseModel):
     budget_note: str = ""
     review_verdict: str = ""
     changed_files: list[str] = []
+    # 061: which loop ran, and the v2 implementer/auditor summary.
+    flow_version: str = "v1"
+    implementer: dict[str, Any] = {}
+    auditor: dict[str, Any] = {}
     approval_required: bool = False
     approved: bool = False
     # Usage/evidence (012 T11): filled from CrewOutput.token_usage.
@@ -214,6 +218,29 @@ def _fallback_key(role: str) -> str:
         return "SWARM_VERIFIER_MODEL"
     if role.startswith("senior"):
         return "SWARM_SENIOR_MODEL"
+    # 061 v2 aliases follow the id that actually supplied the model.
+    if role.startswith("implementer"):
+        if "escalation" in role:
+            return (
+                "SWARM_ESCALATION_MODEL"
+                if os.getenv("SWARM_ESCALATION_MODEL", "").strip()
+                else "SWARM_SENIOR_MODEL"
+            )
+        return (
+            "SWARM_IMPLEMENTER_MODEL"
+            if os.getenv("SWARM_IMPLEMENTER_MODEL", "").strip()
+            else "SWARM_CODER_MODEL"
+        )
+    if role.startswith("auditor"):
+        for var in (
+            "SWARM_AUDITOR_MODEL",
+            "SWARM_VERIFIER_MODEL",
+            "SWARM_REVIEWER_MODEL",
+            "SWARM_SENIOR_MODEL",
+        ):
+            if os.getenv(var, "").strip():
+                return var
+        return "SWARM_AUDITOR_MODEL"
     return "SWARM_CODER_MODEL"
 
 
@@ -317,6 +344,19 @@ def _resolve_scope() -> tuple[str, ...]:
     from swarm.tools_guarded import resolve_scope
 
     return resolve_scope()
+
+
+_OFF_VALUES = frozenset({"0", "false", "no", "off"})
+
+
+def flow_v2_enabled(env: dict[str, str] | None = None) -> bool:
+    """061: v2 is the default; `SWARM_FLOW_V2=0` runs the v1 rollback path."""
+    source = os.environ if env is None else env
+    return str(source.get("SWARM_FLOW_V2", "1")).strip().lower() not in _OFF_VALUES
+
+
+def flow_version(env: dict[str, str] | None = None) -> str:
+    return "v2" if flow_v2_enabled(env) else "v1"
 
 
 _VERDICT_RE = re.compile(r"^\s*\**\s*VERDICT\s*:?\s*\**\s*(PASS|BLOCKED)\b", re.IGNORECASE | re.MULTILINE)
@@ -1227,6 +1267,7 @@ class SwarmFlow(Flow[SwarmState]):
         super().__init__()
         self._spec_dir = spec_dir
         self._task_id = task_id
+        self.state.flow_version = flow_version()
         self._replan = replan
         self._commit = commit
         self._interrupted = False
@@ -3386,6 +3427,16 @@ class SwarmFlow(Flow[SwarmState]):
                     # 046 AC-3: profile aware — a local Ollama step may need
                     # minutes, a cloud call must not hang for them.
                     crew_timeout = llms.crew_timeout_seconds()
+                    # 061: one implementer round owns the whole task and may
+                    # need many tool calls; the v1 micro-step cap would cut a
+                    # legitimate round in half. The task wall still bounds it.
+                    if role.startswith(("implementer", "auditor")):
+                        from swarm.usage import env_int as _env_int
+
+                        crew_timeout = max(
+                            crew_timeout,
+                            float(_env_int("SWARM_V2_CREW_TIMEOUT_SECONDS", 900)),
+                        )
                     remaining = crew_timeout
                     # 022 AC-2: wall budget caps each crew call.
                     budget = int(getattr(self, "_wall_budget", 0) or 0)
@@ -3550,6 +3601,12 @@ class SwarmFlow(Flow[SwarmState]):
                 return ""
 
         try:
+            # 061: one whole-task implementer + deterministic gates + one auditor.
+            # The v1 branch below stays reachable with SWARM_FLOW_V2=0.
+            if flow_v2_enabled():
+                self._run_crew_v2(task)
+                self.state.changed_files = run_delta(self._baseline)
+                return self.state.result
             plan_text = ""
             plan_src = "derived"
             if cache.is_file() and not self._replan:
@@ -4092,6 +4149,257 @@ class SwarmFlow(Flow[SwarmState]):
         self.state.status = "crew_done"
         return self.state.result
 
+    # ------------------------------------------------------------------
+    # 061 v2: one implementer, deterministic gates, one auditor
+    # ------------------------------------------------------------------
+
+    def _v2_gate_run(
+        self, changed: list[str]
+    ) -> tuple[list[str], dict[str, int], str, list[str]]:
+        """Run every configured gate under the harness role and record evidence.
+
+        The old QA model was the gate runner; in v2 the harness is. Each command
+        goes through `Guarded Shell` with `agent_role="Harness Gatekeeper"`, so
+        `_gate_evidence` can accept it at the current delta hash. A gate the log
+        did not capture is retried once; a missing record stays red.
+        """
+        from swarm.tools_guarded import ShellTool, run_delta
+
+        commands = gate_commands()
+
+        def record() -> tuple[list[str], dict[str, int], str, list[str]]:
+            shell = ShellTool(agent_role="Harness Gatekeeper")
+            for command in commands:
+                shell._run(command)
+            changed_now = self._in_scope_paths(run_delta(self._baseline))
+            gates, transcript, missing = self._gate_evidence(
+                changed_now, agents=("Harness Gatekeeper",)
+            )
+            if missing:
+                for command in missing:
+                    shell._run(command)
+                gates, transcript, missing = self._gate_evidence(
+                    changed_now, agents=("Harness Gatekeeper",)
+                )
+            return changed_now, gates, transcript, missing
+
+        self._pre_qa_style()
+        changed_now, gates, transcript, missing = record()
+        if self._autofix_style(gates, transcript):
+            # The formatter changed the delta: its evidence hash moved.
+            changed_now, gates, transcript, missing = record()
+        self._evidence_agents = ("Harness Gatekeeper",)
+        return changed_now, gates, transcript, missing
+
+    def _v2_reject_report(
+        self,
+        gates: dict[str, int],
+        transcript: str,
+        changed: list[str],
+        missing: list[str],
+    ) -> str:
+        """The compact, failing-gates-first feedback an implementer round gets."""
+        from swarm.evidence import report_text
+
+        self.state.review_verdict = "blocked"
+        self.state.review_text = "harness gate evidence"
+        report = self._qa_report(gates, transcript, changed, missing)
+        self.state.qa_report = report
+        return report_text(report)
+
+    def _v2_e2e_round(self, changed: list[str]) -> str:
+        """Run the browser suite when the brief demands it; return '' when green.
+
+        The suite is evidence, not prose: the driver records its exit and tail in
+        `shell_log.jsonl`, and `_e2e_state` reads it at the current delta hash.
+        """
+        from swarm import evidence as ev
+
+        if not (ev.e2e_enabled() and ev.e2e_required(self.state.brief, changed)):
+            return ""
+        self.state.changed_files = list(changed)
+        self._run_e2e_deterministically([])
+        state = self._e2e_state()
+        if state.get("recorded"):
+            return ""
+        note = state.get("note") or "the browser suite did not pass"
+        tail = ""
+        runs = ev.e2e_executions(
+            ev.read_executions(self.run_dir / ev.SHELL_LOG)
+        )
+        if runs:
+            tail = str(runs[-1].get("tail") or "")[-3000:]
+        return f"The browser suite is required and did not pass: {note}\n{tail}".strip()
+
+    def _v2_audit_context(
+        self, task: Any, changed: list[str], transcript: str
+    ) -> str:
+        """Gate evidence first, then the same bounded scenario context v1's verifier read."""
+        from swarm.verify import render_context, scenario_context
+
+        context = scenario_context(REPO_ROOT, self._spec_dir, task, changed)
+        return (
+            "GATE EVIDENCE (recorded by the harness at this delta):\n"
+            + (transcript or "(no gate output)")[-12000:]
+            + "\n\nSCENARIO CONTEXT (delta files, referenced ACs, connections):\n"
+            + render_context(context)
+        )
+
+    def _run_crew_v2(self, task: Any) -> str:
+        """061: whole-task implementer → deterministic gates → one auditor.
+
+        The loop is bounded by `SWARM_V2_MAX_ROUNDS` (default 3). Round 1 uses
+        the implementer model; every later round reuses the same builder on the
+        escalation tier. A red round's gate/audit evidence is the next round's
+        feedback. Only green gates + a grounded auditor PASS can make the run
+        green; the shared `gate`/`save_run` listeners still decide and re-check.
+        """
+        from swarm import guards as _guards
+        from swarm.crew import build_auditor_crew, build_implementer_crew
+        from swarm.guards import delta_record
+        from swarm.tools_guarded import run_delta
+        from swarm.usage import env_int
+
+        self.state.flow_version = "v2"
+        self.state.plan_src = "internal"
+        self.state.plan_steps = 0
+        self._step_paths = []
+        self._allow_cache = None
+        rounds = env_int("SWARM_V2_MAX_ROUNDS", 3)
+        rounds = max(rounds, 1)
+        implementer: dict[str, Any] = {
+            "rounds": 0,
+            "escalations": 0,
+            "feedback_chars": 0,
+            "passed": False,
+        }
+        auditor: dict[str, Any] = {
+            "rounds": 0,
+            "verdicts": [],
+            "blocked": False,
+            "grounded": None,
+            "model": "",
+        }
+        self.state.implementer = implementer
+        self.state.auditor = auditor
+        self.state.review_verdict = ""
+        self.state.review_text = ""
+        gates: dict[str, int] = {}
+        transcript = ""
+        missing: list[str] = []
+        changed: list[str] = []
+        feedback = ""
+        work_summary = ""
+        self._task_tokens_start = self.state.total_tokens
+        cost_at_task_start = self._run_cost()
+        self._task_cost_start = cost_at_task_start if cost_at_task_start is not None else 0.0
+        self._task_started = time.monotonic()
+        last_sig = self._delta_signature()
+
+        for round_no in range(1, rounds + 1):
+            escalated = round_no > 1
+            implementer["rounds"] = round_no
+            if escalated:
+                implementer["escalations"] = round_no - 1
+            implementer["feedback_chars"] = len(feedback)
+            role = "implementer:escalation" if escalated else "implementer"
+            print(
+                f"v2 round {round_no}/{rounds} ({role})"
+                + (f", {len(feedback)} chars of feedback" if feedback else ""),
+                flush=True,
+            )
+            _, work_summary = self._kickoff(
+                lambda round_no=round_no, feedback=feedback, escalated=escalated: build_implementer_crew(
+                    self._spec_dir,
+                    task,
+                    round_no=round_no,
+                    feedback=feedback,
+                    escalated=escalated,
+                ),
+                role=role,
+                step=f"impl{round_no}",
+            )
+            self.state.dev_attempts = round_no
+            changed = self._in_scope_paths(run_delta(self._baseline))
+            if _guards.enabled():
+                record = delta_record(task.brief, changed, REPO_ROOT)
+                self.state.delta_guard = record
+                print(_guards.summary(record), flush=True)
+                if record["reason"]:
+                    raise _DeltaStop(str(record["reason"]), record)
+            if self._revert_out_of_scope(run_delta(self._baseline)):
+                changed = self._in_scope_paths(run_delta(self._baseline))
+            self.state.changed_files = list(changed)
+            changed, gates, transcript, missing = self._v2_gate_run(changed)
+            self.state.gates = gates
+            self.state.transcript = transcript
+            self._record_gate_selection("full", gate_commands(), [], gates)
+            self._record_best_delta(gates)
+            e2e_note = self._v2_e2e_round(changed) if _gates_green(gates) else ""
+
+            if _gates_green(gates) and not e2e_note:
+                auditor["rounds"] += 1
+                context = self._v2_audit_context(task, changed, transcript)
+                _, audit_out = self._kickoff(
+                    lambda context=context: build_auditor_crew(
+                        self._spec_dir, task, context
+                    ),
+                    role="auditor",
+                    step="audit",
+                )
+                verdict = reviewer_verdict(audit_out)
+                auditor["verdicts"].append(verdict)
+                self.state.review_verdict = verdict if verdict != "unknown" else "blocked"
+                self.state.review_text = audit_out
+                self.state.result = audit_out[:8000]
+                if verdict == "pass":
+                    implementer["passed"] = True
+                    break
+                auditor["blocked"] = True
+                if not block_is_grounded(audit_out):
+                    self.state.ungrounded_block = True
+                    self.state.review_note = (
+                        "auditor blocked a green delta without a checkable citation"
+                    )
+                    print("v2 audit: ungrounded block → stopping", flush=True)
+                    break
+                feedback = "The auditor blocked this delta. Fix the cited findings:\n" + audit_out[-8000:]
+            else:
+                auditor["blocked"] = True
+                report_text_now = (
+                    self._v2_reject_report(gates, transcript, changed, missing)
+                    if not e2e_note
+                    else ""
+                )
+                feedback = (e2e_note + "\n\n" + report_text_now).strip()
+            self.state.fix_rounds += 1
+            sig = self._delta_signature()
+            if round_no > 1 and sig == last_sig:
+                self.state.no_progress = True
+                print("v2: no progress (the rejected round changed no files)", flush=True)
+                break
+            last_sig = sig
+
+        self.state.gates = gates
+        self.state.transcript = transcript
+        self.state.changed_files = list(changed)
+        self.state.implementer = implementer
+        self.state.auditor = auditor
+        if _gates_green(gates) and self.state.review_verdict == "pass":
+            self.state.result = (
+                (work_summary or "")
+                + "\n--- audit ---\n"
+                + self.state.review_text
+            )[:8000]
+        else:
+            self.state.result = (
+                (work_summary or "")
+                + "\n--- last evidence ---\n"
+                + (feedback or self.state.review_text or transcript)
+            )[:8000]
+        self.state.status = "crew_done"
+        return self.state.result
+
     def _e2e_state(self) -> dict[str, Any]:
         """026 AC-8: does this task require an e2e execution, and was one recorded?"""
         from swarm import evidence as ev
@@ -4492,6 +4800,11 @@ class SwarmFlow(Flow[SwarmState]):
             "plan_steps": self.state.plan_steps,
             "review_verdict": self.state.review_verdict,
             "review_note": self.state.review_note,
+            "flow": {
+                "version": self.state.flow_version,
+                "implementer": self.state.implementer,
+                "auditor": self.state.auditor,
+            },
             "judges": self.state.judges,
             "correction_reverted": self.state.correction_reverted,
             "e2e": self.state.e2e,

@@ -312,6 +312,56 @@ SELF_CHECK_RULES = (
     "Use Repo Create for new files, Repo Edit for existing files."
 )
 
+IMPLEMENTER_RULES = (
+    "You own this task end to end. You decide the implementation plan yourself: "
+    "read the spec, plan and the real modules, then write every file the brief "
+    "needs. There is no separate planner or step list; do not wait for one. "
+    "Land the change with the file tools: `Repo Create` for new files, `Repo "
+    "Edit` for existing ones. A chat answer with the code in it is not a landed "
+    "change — the harness checks the run delta, not your prose. "
+    "Use the REAL exported API of every module you touch; never invent a "
+    "function, field, store or import path. If the API you need does not exist, "
+    "add it inside this task's scope. When you replace or restructure code, "
+    "remove the old code you replaced instead of leaving a duplicate. "
+    "When the brief or an AC names a test, write it in the same round. It must "
+    "import the real module under test; never re-declare or stub the code under "
+    "test. "
+    "The harness runs the project gates after you. Never run a gate yourself: "
+    "read the gate transcript in your next round and fix its real cause. "
+    "Work in one coherent pass. Loop rules (hard): at most 30 tool calls, then "
+    "finish; never read the same file range twice; `ls` instead of guessing paths. "
+    "Result: one line per file you changed, plus anything the harness must know."
+)
+
+AUDITOR_RULES = (
+    "You are the read-only auditor. The harness has already run every gate and "
+    "recorded the exit codes and failure output below; do not run a gate and do "
+    "not edit a file. Answer ONE question: is this task done — do the recorded "
+    "gates pass, and does the implemented scenario do what the brief and its "
+    "referenced acceptance criteria say, end to end? Check three things:\n"
+    "1. EVERY element the brief names exists (file, endpoint, component, test).\n"
+    "2. The pieces CONNECT: an endpoint is mounted where the app serves it; a "
+    "component imports the REAL module instead of a local copy; a test imports "
+    "the module it tests; the pinned contract and the code agree.\n"
+    "3. The referenced acceptance criteria are addressed by this task.\n"
+    "Judge THIS task only: a requirement that belongs to a later task in "
+    "tasks.md (wiring, UI, consumers, e2e, a future AC) is out of scope even "
+    "when a spec-level AC mentions it. Do not require an algorithm, precision "
+    "or structure the brief does not state; a working implementation of the "
+    "named behaviour passes. No style or taste.\n\n"
+    "Output format (exact, no other prose):\n"
+    "FINDING: <file:line or file> — <what is wrong, precisely>\n"
+    "… one line per problem …\n"
+    "STEP n: <file> — <one precise action that fixes it>\n"
+    "… only when BLOCKED …\n"
+    "VERDICT: PASS\n"
+    "or\n"
+    "VERDICT: BLOCKED\n"
+    "A BLOCKED verdict must cite at least one checkable failure (a file:line, a "
+    "failing gate/command, a test, or an AC). With nothing concrete to fix, "
+    "answer PASS."
+)
+
 
 def gate_commands_hint() -> str:
     """The project's gate commands (config-driven; no stack assumptions)."""
@@ -328,6 +378,27 @@ _AGENT_COPY: dict[str, tuple[str, str]] = {
     "step": (
         "Execute one small step with Repo Edit only. Smallest diff.",
         "You write scaffold files precisely. You run no network commands.",
+    ),
+    "implementer": (
+        "Own this task end to end: plan it, land every file, leave nothing for a later step.",
+        (
+            "You are the implementer. You receive the whole task, not a fragment: read the "
+            "spec, the plan and the real modules, decide the implementation, and write every "
+            "file the brief names. You plan inside your own tool loop and never wait for a "
+            "separate planner. The harness runs the gates after you, so you never run one. "
+            "You write tests the brief names, import the real modules, and remove code you "
+            "replace rather than leaving a duplicate."
+        ),
+    ),
+    "auditor": (
+        "Decide whether the recorded gates and the implemented scenario satisfy the brief and its ACs.",
+        (
+            "You are the read-only auditor: the old reviewer and scenario verifier in one role. "
+            "The harness has already run every gate and recorded the evidence; you judge that "
+            "evidence and the delta against the brief. You never write a file, never run a gate "
+            "and never commit. A block must cite something checkable, and a working "
+            "implementation of the named behaviour passes."
+        ),
     ),
     "fix": (
         "Investigate QA's report, then fix the real cause. Smallest coherent diff.",
@@ -404,6 +475,8 @@ _FIXED_ROLES = {
     "qa": "QA Gatekeeper",
     "verifier": "Scenario Verifier",
     "plan": "Spec Planner",
+    "implementer": "Implementer",
+    "auditor": "Auditor",
 }
 
 
@@ -418,6 +491,10 @@ def agent_copy(task: SpecTask | None, kind: str) -> dict[str, str]:
         assert task is not None, f"kind {kind} needs a task"
         role = coder_role(task)
         backstory = backstory + QA_IS_THE_GATEKEEPER + " " + stack_hint(task)
+    elif kind == "implementer":
+        assert task is not None, "kind implementer needs a task"
+        role = _FIXED_ROLES["implementer"]
+        backstory = backstory + " " + stack_hint(task)
     else:
         role = _FIXED_ROLES[kind]
         if kind == "plan":
@@ -499,6 +576,8 @@ def task_block(
 
 _RULES: dict[str, str] = {
     "step": STEP_RULES,
+    "implementer": IMPLEMENTER_RULES,
+    "auditor": AUDITOR_RULES,
     "fix": FIX_READ_RULES + " " + FIX_RULES + " Loop rules (hard): at most 12 tool "
     "calls, then write the final answer; never read the same file twice.",
     "selfcheck": SELF_CHECK_RULES + " " + FIX_RULES + " Loop rules (hard): at most 12 tool "
@@ -535,8 +614,8 @@ def role_rules(kind: str) -> str:
             f"4–{MAX_STEPS} steps",
             f"4–{plan_max_steps()} steps (use the fewest coherent steps for a small task)",
         )
-    if kind == "verifier":
-        # Read-only by contract; the scope rule is about writes, which it cannot do.
+    if kind in {"verifier", "auditor"}:
+        # Read-only by contract; the scope rule is about writes, which they cannot do.
         return rules
     return rules + " " + SCOPE_RULE
 
@@ -547,9 +626,9 @@ def stable_prefix(task: SpecTask, spec_dir: str = "", kind: str = "step") -> str
     Pure: same task, spec directory and kind → same string, whatever step or
     round asks for it. Volatile content is appended by the `*_prompt` functions.
     """
-    scenario = kind == "verifier"
-    coder = kind in {"step", "fix", "selfcheck", "senior", "senior_step"}
-    ac = scenario or (coder and coder_acs_enabled()) or kind == "plan"
+    scenario = kind in {"verifier", "auditor"}
+    coder = kind in {"step", "fix", "selfcheck", "senior", "senior_step", "implementer"}
+    ac = scenario or (coder and (kind == "implementer" or coder_acs_enabled())) or kind == "plan"
     scope_line = ""
     if scenario:
         from swarm.verify import task_line
@@ -565,7 +644,13 @@ def stable_prefix(task: SpecTask, spec_dir: str = "", kind: str = "step") -> str
             design_block = ""
     parts = [
         role_rules(kind),
-        task_block(task, spec_dir, ac=ac, plan=scenario, scope_line=scope_line),
+        task_block(
+            task,
+            spec_dir,
+            ac=ac,
+            plan=scenario or kind == "implementer",
+            scope_line=scope_line,
+        ),
     ]
     if design_block:
         parts.append(design_block)
@@ -646,6 +731,49 @@ def senior_prompt(task: SpecTask, spec_dir: str, report_text: str, qa_review: st
         + f"{report_text}\n"
         + block
         + "Result: diff summary + which reported gate line each change addresses."
+    )
+
+
+def implementer_prompt(
+    task: SpecTask,
+    spec_dir: str,
+    *,
+    round_no: int = 1,
+    feedback: str = "",
+    escalated: bool = False,
+) -> str:
+    """The whole task plus the previous round's evidence, feedback last."""
+    parts = [
+        stable_prefix(task, spec_dir, "implementer"),
+        (
+            f"\n\nThis is implementer round {round_no}. "
+            + (
+                "You are on the escalation model tier: the previous round did not pass. "
+                if escalated
+                else "Own the whole task and land it in this round. "
+            )
+            + "Nothing is left for a later step; the harness audits this delta when you finish."
+        ),
+    ]
+    if feedback.strip():
+        parts.append(
+            "\nThe harness rejected the previous round. Its evidence (failing gates "
+            "first) is below; fix the real cause and keep what already works:\n"
+            + feedback[:12000]
+        )
+    parts.append(
+        "\nResult: one line per file changed, then anything the audit must know."
+    )
+    return "".join(parts)
+
+
+def auditor_prompt(task: SpecTask, spec_dir: str, context_text: str) -> str:
+    """Gate evidence + scenario context, after the stable auditor prefix."""
+    return (
+        stable_prefix(task, spec_dir, "auditor")
+        + "\n\nHarness gate evidence and this run's delta/scenario context:\n\n"
+        + f"{context_text}"
+        + "\n\nResult: FINDING/STEP lines when blocked, then exactly one VERDICT line."
     )
 
 
@@ -767,10 +895,12 @@ __all__ = [
     "SCOPE_RULE",
     "STEP_RE",
     "agent_copy",
+    "auditor_prompt",
     "brief_paths",
     "coder_role",
     "fix_prompt",
     "gate_commands_hint",
+    "implementer_prompt",
     "parse_steps",
     "plan_prompt",
     "prompt_prefix",

@@ -58,9 +58,9 @@ ROLE_ENV = dict(ROLE_VARS)
 
 def _base_role(key: str) -> str | None:
     """`coder:fix2` → coder, `qa` → reviewer: bucket keys are per call, not per role."""
-    if key.startswith("coder"):
+    if key.startswith(("implementer", "coder")):
         return "coder"
-    if key.startswith(("qa", "reviewer")):
+    if key.startswith(("auditor", "qa", "reviewer")):
         return "reviewer"
     if key.startswith("verifier"):
         return "verifier"

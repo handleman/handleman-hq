@@ -52,16 +52,43 @@ class Role:
     model_var: str
     fallback_var: str
     optional: bool = False
+    # 061: an optional alias role inherits the first set compat id (and its
+    # fallback). This is how an existing v1 `.env` keeps working when v2 asks
+    # for an implementer/auditor/escalation model.
+    compat: tuple[str, ...] = ()
 
 
 # The single role table. `optional` means "documented default when unset" (the
-# verifier inherits the senior model).
+# verifier inherits the senior model). 061 adds the v2 aliases; the v1 ids stay
+# valid for the rollback release.
 ROLES: tuple[Role, ...] = (
     Role("planner", "SWARM_PLANNER_MODEL", "SWARM_PLANNER_FALLBACK_MODEL"),
     Role("coder", "SWARM_CODER_MODEL", "SWARM_CODER_FALLBACK_MODEL"),
     Role("reviewer", "SWARM_REVIEWER_MODEL", "SWARM_REVIEWER_FALLBACK_MODEL"),
     Role("senior", "SWARM_SENIOR_MODEL", "SWARM_SENIOR_FALLBACK_MODEL"),
     Role("verifier", "SWARM_VERIFIER_MODEL", "SWARM_VERIFIER_FALLBACK_MODEL", optional=True),
+    # 061 v2 roles: optional aliases over the v1 ids.
+    Role(
+        "implementer",
+        "SWARM_IMPLEMENTER_MODEL",
+        "SWARM_IMPLEMENTER_FALLBACK_MODEL",
+        optional=True,
+        compat=("SWARM_CODER_MODEL",),
+    ),
+    Role(
+        "auditor",
+        "SWARM_AUDITOR_MODEL",
+        "SWARM_AUDITOR_FALLBACK_MODEL",
+        optional=True,
+        compat=("SWARM_VERIFIER_MODEL", "SWARM_REVIEWER_MODEL", "SWARM_SENIOR_MODEL"),
+    ),
+    Role(
+        "escalation",
+        "SWARM_ESCALATION_MODEL",
+        "SWARM_ESCALATION_FALLBACK_MODEL",
+        optional=True,
+        compat=("SWARM_SENIOR_MODEL",),
+    ),
 )
 
 # The two shapes consumers already imported (display order preserved).
@@ -124,9 +151,17 @@ def resolve_models(env: Mapping[str, str] | None = None) -> Profile:
     out: dict[str, Model] = {}
     for role in ROLES:
         model = str(source.get(role.model_var, "")).strip()
+        for compat_var in role.compat:
+            if model:
+                break
+            model = str(source.get(compat_var, "")).strip()
         if not model and role.name == "verifier":
             model = str(source.get("SWARM_SENIOR_MODEL", "")).strip()
         fallback = str(source.get(role.fallback_var, "")).strip()
+        for compat_var in role.compat:
+            if fallback:
+                break
+            fallback = str(source.get(compat_var.replace("_MODEL", "_FALLBACK_MODEL"), "")).strip()
         if not fallback:
             fallback = str(source.get("SWARM_LOCAL_FALLBACK_MODEL", "")).strip()
         out[role.name] = Model(

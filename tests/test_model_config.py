@@ -78,14 +78,57 @@ def test_the_router_agrees_everywhere():
 
 def test_roles_are_one_table_with_the_expected_shape():
     names = [r.name for r in model_config.ROLES]
-    assert names == ["planner", "coder", "reviewer", "senior", "verifier"]
+    assert names == [
+        "planner",
+        "coder",
+        "reviewer",
+        "senior",
+        "verifier",
+        "implementer",
+        "auditor",
+        "escalation",
+    ]
     optional = [r.name for r in model_config.ROLES if r.optional]
-    assert optional == ["verifier"]
+    assert optional == ["verifier", "implementer", "auditor", "escalation"]
     # The legacy tuples still have the same values (no consumer churn).
     assert model_config.ROLE_MODEL_VARS[0] == ("planner", "SWARM_PLANNER_MODEL")
     assert "SWARM_SENIOR_MODEL" in model_config.ROLE_VARS
     assert "SWARM_VERIFIER_MODEL" in model_config.OPTIONAL_ROLE_VARS
     assert "SWARM_VERIFIER_MODEL" not in model_config.ROLE_VARS
+
+
+def test_v2_roles_inherit_the_v1_ids_when_unset():
+    """061 AC-1: an existing .env needs no edit; a v2 id wins when set."""
+    env = {
+        "SWARM_CODER_MODEL": "opencode-go/glm-5.3-flash",
+        "SWARM_CODER_FALLBACK_MODEL": "opencode-go/mimo-v2.6-flash",
+        "SWARM_VERIFIER_MODEL": "opencode-go/qwen3.8-flash",
+        "SWARM_VERIFIER_FALLBACK_MODEL": "opencode-go/mimo-v2.6-flash",
+        "SWARM_SENIOR_MODEL": "opencode-go/deepseek-v4-pro",
+        "SWARM_SENIOR_FALLBACK_MODEL": "opencode-go/kimi-k2.7-code",
+        "SWARM_ALLOW_PAID": "1",
+    }
+    profile = model_config.resolve_models(env)
+    assert profile.primary("implementer") == "opencode-go/glm-5.3-flash"
+    assert profile.fallback("implementer") == "opencode-go/mimo-v2.6-flash"
+    assert profile.primary("auditor") == "opencode-go/qwen3.8-flash"
+    assert profile.fallback("auditor") == "opencode-go/mimo-v2.6-flash"
+    assert profile.primary("escalation") == "opencode-go/deepseek-v4-pro"
+    assert profile.fallback("escalation") == "opencode-go/kimi-k2.7-code"
+
+    env.update(
+        {
+            "SWARM_IMPLEMENTER_MODEL": "opencode-go/implementer-v2",
+            "SWARM_IMPLEMENTER_FALLBACK_MODEL": "opencode-go/impl-fallback",
+            "SWARM_AUDITOR_MODEL": "opencode-go/auditor-v2",
+            "SWARM_ESCALATION_MODEL": "opencode-go/escalation-v2",
+        }
+    )
+    profile = model_config.resolve_models(env)
+    assert profile.primary("implementer") == "opencode-go/implementer-v2"
+    assert profile.fallback("implementer") == "opencode-go/impl-fallback"
+    assert profile.primary("auditor") == "opencode-go/auditor-v2"
+    assert profile.primary("escalation") == "opencode-go/escalation-v2"
 
 
 def test_resolve_inherits_senior_for_the_verifier_and_local_fallback():

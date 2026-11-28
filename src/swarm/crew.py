@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import os
 import sys
 
 from crewai import Agent, Crew, Process, Task
 
 from swarm import prompts
 from swarm.llms import (
+    auditor_llm,
     coder_llm,
     conflict_llm,
+    implementer_llm,
     planner_llm,
     reviewer_llm,
     senior_llm,
@@ -48,8 +51,10 @@ __all__ = [
     "SENIOR_ATTEMPTS",
     "STEP_ATTEMPTS",
     "STEP_RE",
+    "build_auditor_crew",
     "build_conflict_crew",
     "build_fix_crew",
+    "build_implementer_crew",
     "build_plan_crew",
     "build_review_crew",
     "build_selfcheck_crew",
@@ -259,6 +264,93 @@ def build_visual_qa_crew(spec_dir: str, task: SpecTask, facts_text: str, screens
         agent=agent,
     )
     return Crew(agents=[agent], tasks=[t_qa], process=Process.sequential, verbose=False)
+
+
+def _v2_iterations(env_var: str, default: int) -> int:
+    try:
+        return max(4, int(os.getenv(env_var, str(default)) or default))
+    except ValueError:
+        return default
+
+
+def build_implementer_crew(
+    spec_dir: str,
+    task: SpecTask,
+    *,
+    round_no: int = 1,
+    feedback: str = "",
+    escalated: bool = False,
+) -> Crew:
+    """061: one implementer owns the whole task and plans inside its tool loop.
+
+    The same builder and prompt are reused for a retry and for the escalation
+    tier; only the model and the feedback change. It has no gate access, so the
+    harness remains the only gate runner.
+    """
+    copy = prompts.agent_copy(task, "implementer")
+    agent = Agent(
+        role=copy["role"],
+        goal=copy["goal"],
+        backstory=copy["backstory"],
+        llm=implementer_llm(escalated=escalated),
+        tools=_tools(allow_gates=False, role=copy["role"]),
+        verbose=False,
+        max_retry_limit=AGENT_RETRY_LIMIT,
+        max_iter=_v2_iterations("SWARM_V2_MAX_ITER", 30),
+    )
+    from swarm.tools_skills import inject_skill_into_agent
+
+    try:
+        agent = inject_skill_into_agent("coder", agent)
+    except Exception as e:  # noqa: BLE001 — skill injection must never fail the run
+        print(f"[crew] skill inject failed for implementer: {e}", file=sys.stderr)
+    t_work = Task(
+        description=prompts.implementer_prompt(
+            task,
+            spec_dir,
+            round_no=round_no,
+            feedback=feedback,
+            escalated=escalated,
+        ),
+        expected_output=(
+            "One line per file changed, plus anything the harness must know. "
+            "The files must be landed with the file tools."
+        ),
+        agent=agent,
+    )
+    return Crew(agents=[agent], tasks=[t_work], process=Process.sequential, verbose=False)
+
+
+def build_auditor_crew(spec_dir: str, task: SpecTask, context_text: str) -> Crew:
+    """061: one read-only auditor for the recorded gates and the scenario.
+
+    `FullFileReadTool` + `SearchTool` + inspection-only shell; no write tool, no
+    gate access. Its final answer is the deliverable.
+    """
+    copy = prompts.agent_copy(task, "auditor")
+    agent = Agent(
+        role=copy["role"],
+        goal=copy["goal"],
+        backstory=copy["backstory"],
+        llm=auditor_llm(),
+        tools=[
+            FullFileReadTool(),
+            SearchTool(),
+            ShellTool(allow_gates=False, agent_role="auditor"),
+        ],
+        verbose=False,
+        max_retry_limit=AGENT_RETRY_LIMIT,
+        max_iter=_v2_iterations("SWARM_V2_AUDITOR_MAX_ITER", 10),
+    )
+    t_audit = Task(
+        description=prompts.auditor_prompt(task, spec_dir, context_text),
+        expected_output=(
+            "FINDING lines (one per problem), STEP n correction lines when blocked, "
+            "then exactly `VERDICT: PASS` or `VERDICT: BLOCKED`."
+        ),
+        agent=agent,
+    )
+    return Crew(agents=[agent], tasks=[t_audit], process=Process.sequential, verbose=False)
 
 
 def build_review_crew(spec_dir: str, task: SpecTask, work_summary: str) -> Crew:

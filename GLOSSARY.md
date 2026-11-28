@@ -104,8 +104,8 @@ Changed files outside the task scope are reverted before the run can be saved.
 _Avoid_: rollback (that is a whole-run operation)
 
 **Guarded Shell**:
-The argv-only, allowlisted shell the coder and QA get; it is the only way an
-agent runs commands.
+The argv-only, allowlisted shell an agent gets; it is the only way an agent runs
+commands. In v2 the harness uses it too, as the `Harness Gatekeeper`.
 _Avoid_: terminal, bash
 
 **Driver**:
@@ -152,39 +152,40 @@ The supervisor's bound on how many rounds it will start before stopping.
 _Avoid_: limit, budget
 
 **Role**:
-A model-backed agent with one job: planner, coder, QA, reviewer, verifier,
-senior, conflict resolver, visual, acceptance.
+A model-backed agent with one job: implementer, auditor, visual, acceptance. The
+v1 planner, coder, QA, reviewer, verifier and senior are legacy (rollback only).
 _Avoid_: agent (one role), worker
 
-**QA**:
-The role that runs the gates and records their exit codes.
-_Avoid_: reviewer (QA runs; the reviewer judges)
+**Implementer**:
+The v2 role that owns a whole task: it reads the spec and real modules, plans
+inside its own tool loop, and lands code and tests. It runs no gates.
+_Avoid_: coder (v1's micro-step role), developer
 
-**Reviewer**:
-The role that declares PASS or BLOCKED from the recorded evidence.
-_Avoid_: QA, verifier
+**Auditor**:
+The v2 read-only role that judges the harness-recorded gates, the delta and the
+scenario against the brief and its ACs, then declares PASS or BLOCKED. It merges
+the v1 reviewer and verifier.
+_Avoid_: QA, reviewer, verifier (v1 terms)
 
-**Verifier**:
-The read-only role that checks the code does what the task brief says, beyond
-the gates.
-_Avoid_: reviewer, tester
-
-**Senior**:
-The bounded escalation role that attempts a deep fix when the verifier or QA
-blocks.
-_Avoid_: expert, fallback coder
+**Escalation tier**:
+The stronger model the same implementer prompt runs on after a rejected round.
+It is a model choice, not a persona.
+_Avoid_: senior (the v1 persona)
 
 **Conflict resolver**:
-The role that resolves a merge or stash conflict inside the task's scope.
+The role that resolves a merge or stash conflict inside the task's scope. It
+uses the implementer's model and no separate configured role.
 _Avoid_: merger
 
-**Fix round**:
-The bounded QA → coder → QA loop that repairs a red gate or a verifier block.
-_Avoid_: retry, iteration
+**Round**:
+One implementer pass plus the deterministic gates (and, when green, one audit).
+A rejected round's evidence feeds the next round, which runs on the escalation
+tier.
+_Avoid_: fix round, retry
 
 **Correction**:
-A verifier-driven repair plan executed in steps, guarded so it cannot regress a
-passing build.
+(v1) A verifier-driven repair plan executed in steps, guarded so it cannot
+regress a passing build. v2 folds this into the implementer round.
 _Avoid_: fix round
 
 **Acceptance hook**:
@@ -194,8 +195,8 @@ _Avoid_: final gate (that is the whole batch)
 ## Evidence and green
 
 **Green**:
-A task whose gates passed, review passed, verification passed, and whose delta
-was saved and committed.
+A task whose gates passed, the auditor passed, and whose delta was saved and
+committed.
 _Avoid_: done (done is the ledger state), complete
 
 **Done**:
@@ -245,8 +246,8 @@ The canonical name of a typed stop.
 _Avoid_: error, message
 
 **Judge**:
-A model whose verdict gates green (QA, reviewer, verifier); a judge that cannot
-answer fails closed.
+A model whose verdict gates green (v2: the auditor); a judge that cannot answer
+fails closed.
 _Avoid_: critic
 
 **Off switch**:

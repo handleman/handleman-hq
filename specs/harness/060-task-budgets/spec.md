@@ -17,9 +17,9 @@ See [`evidence.md`](evidence.md). Summary:
 
 | profile | n | cost p90 / max | tokens p90 / max | seconds p90 / max |
 | --- | --- | --- | --- | --- |
-| coding | 180 | $0.14 / $0.25 | 851k / 1.68M | 1663 / 4915 |
-| e2e | 47 | $0.58 / $1.53 | 972k / 2.16M | 1110 / 1802 |
-| visual | 15 | $0.40 / $0.69 | 857k / 1.38M | 1074 / 1415 |
+| coding | 126 | $0.13 / $0.25 | 824k / 1.68M | 1793 / 4915 |
+| e2e | 52 | $0.26 / $1.53 | 972k / 2.16M | 1110 / 2105 |
+| visual | 64 | $0.04 / $0.69 | 622k / 1.38M | 926 / 1415 |
 
 The e2e/visual tails are real (041 T4 hit the old 2M token cap at 2.16M tokens;
 the T2 cost cap at $1.06; the T5 wall clock at 1800s). A **2×** profile of the

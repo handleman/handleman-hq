@@ -6,7 +6,7 @@ free cloud, or all-local Ollama, chosen entirely by `.env` — and **repo-agnost
 — point it at any checkout with a `swarm.yaml`.
 
 ```bash
-pipx install "git+https://github.com/handleman/handleman-hq@v0.6.9"
+pipx install "git+https://github.com/handleman/handleman-hq@v0.7.0"
 cd your-repo
 hq init                           # writes a starter swarm.yaml
 hq preflight                      # every model id, fallback, key, gate and design cache
@@ -33,11 +33,12 @@ For a source checkout use `pip install -e '.[dev]'`.
 
 ## How it works
 
-Each phase is a small CrewAI crew with its own model role; a Flow sequences them
-and owns every decision that must not be made by a model — retries, scope, green,
-commit. Green comes from gate exit codes queued by QA. Read
-[`docs/how-it-works.md`](docs/how-it-works.md) first: the role table, the phase
-order, one flow diagram and the invariant behind it.
+Each phase is a small CrewAI crew; a Flow sequences them and owns every
+decision that must not be made by a model — retries, scope, green, commit. The
+default v2 flow is one whole-task implementer, deterministic harness gates and
+one read-only auditor; green comes from recorded gate exit codes, not prose.
+Read [`docs/how-it-works.md`](docs/how-it-works.md) first: the role table, the
+phase order, one flow diagram and the invariant behind it.
 
 ## The contract (`swarm.yaml`)
 

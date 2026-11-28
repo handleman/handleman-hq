@@ -1,5 +1,11 @@
 # Scenario verification (019)
 
+> **v2 note (061):** the verifier is folded into the single read-only **auditor**,
+> which judges the recorded gate evidence, the delta and the scenario in one
+> pass. This page documents the v1 verifier, still used with
+> `SWARM_FLOW_V2=0`; the capability and the `FINDING:`/`VERDICT:` contract are
+> the same.
+
 > Part of the swarm harness documentation. Start at [`../README.md`](../README.md).
 
 ### Scenario verification (019)

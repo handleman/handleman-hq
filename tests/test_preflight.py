@@ -204,7 +204,16 @@ def test_every_factory_building_is_not_a_problem(monkeypatch):
 
 def test_the_role_list_matches_the_crews():
     names = {name for name, _ in preflight.ROLE_FACTORIES}
-    assert names == {"planner", "coder", "reviewer", "senior", "verifier"}
+    assert names == {
+        "planner",
+        "coder",
+        "reviewer",
+        "senior",
+        "verifier",
+        "implementer",
+        "auditor",
+        "escalation",
+    }
     assert set(preflight.factories()) == names
 
 

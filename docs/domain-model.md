@@ -90,8 +90,8 @@ run with a checkpoint).
 
 **Invariants**
 
-- **Green is evidence**: every required gate exit is 0 at the final delta, the
-  reviewer passed, and the verifier did not block.
+- **Green is evidence**: every required gate exit is 0 at the final delta and
+  the auditor passed. v1 additionally required the reviewer/verifier.
 - A judge that cannot answer fails closed; model prose is never evidence.
 - A run cannot save a delta outside scope; out-of-scope paths are reverted.
 - A green commit carries a done-ledger entry with matching hashes.
@@ -105,8 +105,8 @@ The immutable set of gate exits + transcript + the delta they describe.
 
 - Evidence is bound to the final delta; a later edit makes it stale.
 - An e2e claim needs a recorded Playwright execution at the current delta.
-- QA produces evidence; the reviewer consumes it; the verifier adds a scenario
-  verdict, not gate evidence.
+- The harness runs every gate as `Harness Gatekeeper` in v2; the auditor consumes
+  that evidence and adds a scenario verdict, never gate evidence.
 
 ### Acceptance report
 
@@ -248,6 +248,7 @@ only the recorded evidence does.
 | target contract | `src/swarm/contract.py`, `swarm.yaml.example`, `docs/install.md` |
 | specs/tasks | `src/swarm/spec_loader.py`, `docs/queue.md` |
 | run/flow | `src/swarm/flow.py`, `docs/running.md` |
+| flow v2 roles | `src/swarm/flow.py` (`_run_crew_v2`), `src/swarm/crew.py`, `docs/how-it-works.md` |
 | gates/evidence | `src/swarm/gates.py`, `docs/tools-and-gates.md` |
 | verifier | `src/swarm/verify.py`, `docs/verifier.md` |
 | guards | `src/swarm/guards.py`, `docs/run-guards.md` |
@@ -270,7 +271,8 @@ only the recorded evidence does.
 | --- | --- |
 | run / pilot | **run** = one task; **pilot** = the foreground queue process |
 | green / done | **green** = evidence-backed merge; **done** = valid ledger entry |
-| QA / reviewer | **QA runs gates**; the **reviewer judges evidence** |
+| implementer / coder | **implementer** = whole-task v2 role; **coder** = v1 micro-step role |
+| auditor / QA / verifier | **auditor** = v2 judge; QA/verifier are v1 terms |
 | gate / test | a **gate** is any exit-code check; a test is one kind |
 | acceptance / e2e | **acceptance** is per-spec; **e2e** is per-task gate evidence |
 | driver / script | a **driver** speaks the JSON protocol; a script need not |

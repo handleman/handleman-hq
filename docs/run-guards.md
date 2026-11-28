@@ -7,14 +7,14 @@
 Deterministic checks that run **around** model phases. They exist because the
 cheap answer is almost always available before a judge is paid:
 
-- **Delta guard** (`run.json.delta_guard`, `SWARM_DELTA_GUARD=0` off): after the
-  micro-steps and **before** the self-check/verifier/QA, an empty in-scope delta
-  stops as `reason_code=no_delta`; a brief-named file that did not exist before
-  the run and is still absent stops as `delta_incomplete` with the list. A named
-  existing file that was not touched is recorded as `untouched` (a warning, not a
-  stop — briefs name files for context too). Dotted code such as `route.waypoints`
-  is not a path. This is what the two 014-T10 empty-delta runs (21 + 28 min,
-  $0.18) needed.
+- **Delta guard** (`run.json.delta_guard`, `SWARM_DELTA_GUARD=0` off): after an
+  implementer round (v1: the micro-steps) and **before** the audit (v1:
+  self-check/verifier/QA), an empty in-scope delta stops as `reason_code=no_delta`;
+  a brief-named file that did not exist before the run and is still absent stops
+  as `delta_incomplete` with the list. A named existing file that was not touched
+  is recorded as `untouched` (a warning, not a stop — briefs name files for
+  context too). Dotted code such as `route.waypoints` is not a path. This is what
+  the two 014-T10 empty-delta runs (21 + 28 min, $0.18) needed.
 - **Wall budget is terminal** (`SWARM_TASK_WALL_BUDGET`): `bounded.run_bounded`
   only treats `None` as unbounded; a zero/negative remaining budget refuses the
   call, and the flow raises `_WallBudget` before a crew. 007-T10 once ran 2.7 h
@@ -57,7 +57,8 @@ cheap answer is almost always available before a judge is paid:
   satisfiable: QA's prompt names the exact commands and Guarded Shell allows them
   (`npm --prefix frontend run build`, then
   `npm --prefix frontend exec playwright test [e2e/x.spec.ts]`; no flags, so a
-  model cannot narrow the suite, and coders are refused). `make e2e` is the
+  model cannot narrow the suite, and coders are refused). In v2 the harness runs
+  the suite itself through the e2e driver before the audit. `make e2e` is the
   operator's single entry point; preflight checks
   `frontend/node_modules/.bin/playwright` and the config. 010-T4 was green having
   touched only `helpers.ts`.
@@ -102,3 +103,13 @@ cheap answer is almost always available before a judge is paid:
   coding cap blocked a 2.16M-token e2e task and the 1800s visual wall. Coding is
   unchanged; `SWARM_E2E_CAP_MULTIPLIER`/`SWARM_VISUAL_CAP_MULTIPLIER` override
   the 2× (never below 1×), and `run.json.budget` records the profile.
+
+- **One implementer, one auditor** (061): the default flow gives one implementer
+  the whole task, then the harness (`Harness Gatekeeper`) runs every gate and
+  records the evidence. A read-only auditor judges that evidence and the
+  scenario; only green gates + a grounded `VERDICT: PASS` can be green. A
+  rejected round feeds the same prompt on the escalation tier, bounded by
+  `SWARM_V2_MAX_ROUNDS` (default 3). An ungrounded block stops as
+  `ungrounded_block` without another paid round. `SWARM_FLOW_V2=0` restores the
+  v1 sequence for the pilot's rollback; `run.json.flow` records the version,
+  rounds, escalations and auditor verdicts.

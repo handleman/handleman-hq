@@ -10,3 +10,4 @@ of a real trade-off. One paragraph each; the model is in
 | [0002](0002-green-means-evidence.md) | Green means evidence, not a model's prose |
 | [0003](0003-target-owned-drivers.md) | Target-owned drivers, with a packaged fallback |
 | [0004](0004-design-cache-and-token-first-transport.md) | Figma: local cache, token-first transport |
+| [0005](0005-one-implementer-one-auditor.md) | One implementer, one auditor; the harness owns the gates |

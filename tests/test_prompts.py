@@ -63,6 +63,42 @@ def test_verifier_prefix_carries_the_referenced_acceptance_criteria(spec_repo):
     assert task.brief in coder
 
 
+def test_the_v2_implementer_prefix_is_the_whole_task(spec_repo):
+    """061 AC-2: the implementer gets the ACs and plan lines the v1 coder did not."""
+    task = SpecTask(
+        id="T1",
+        ac_refs=("AC-1", "AC-2"),
+        brief="Add `swarm/bench/corpus.py` and keep `swarm/bench/run.py` wired.",
+    )
+    prefix = prompts.stable_prefix(task, "020-harness-efficiency", "implementer")
+    assert "ACCEPTANCE CRITERIA" in prefix
+    assert "AC-2" in prefix and "cache hints" in prefix
+    assert "PLAN LINES" in prefix and "corpus.py" in prefix
+    assert task.brief in prefix
+    assert "micro-step" not in prefix.lower()
+    # The auditor sees the same scenario context and its own contract.
+    auditor = prompts.stable_prefix(task, "020-harness-efficiency", "auditor")
+    assert "ACCEPTANCE CRITERIA" in auditor and "PLAN LINES" in auditor
+    assert "VERDICT: PASS" in auditor and "FINDING:" in auditor
+    assert auditor != prefix
+
+
+def test_the_v2_prompts_put_feedback_last():
+    task = _task()
+    first = prompts.implementer_prompt(task, "001-example-app", round_no=1)
+    assert first.startswith(prompts.stable_prefix(task, "001-example-app", "implementer"))
+    assert "round 1" in first
+    retry = prompts.implementer_prompt(
+        task, "001-example-app", round_no=2, feedback="FAILING GATES\npytest exit=1", escalated=True
+    )
+    assert retry.startswith(prompts.stable_prefix(task, "001-example-app", "implementer"))
+    assert "escalation model tier" in retry
+    assert retry.index("pytest exit=1") > retry.index("round 2")
+    audit = prompts.auditor_prompt(task, "001-example-app", "GATE EVIDENCE")
+    assert audit.startswith(prompts.stable_prefix(task, "001-example-app", "auditor"))
+    assert audit.rstrip().endswith("exactly one VERDICT line.")
+
+
 def test_plan_lines_are_in_the_verifier_prefix_not_the_coder_prefix(spec_repo):
     task = SpecTask(id="T1", ac_refs=("AC-1",), brief="Add `swarm/bench/corpus.py`.")
     coder = prompts.stable_prefix(task, "020-harness-efficiency", "step")
@@ -113,7 +149,9 @@ def test_fix_and_qa_prompts_put_the_evidence_last():
 
 def test_every_crew_description_starts_with_the_same_prefix_it_hashes():
     from swarm.crew import (
+        build_auditor_crew,
         build_fix_crew,
+        build_implementer_crew,
         build_plan_crew,
         build_review_crew,
         build_selfcheck_crew,
@@ -125,6 +163,8 @@ def test_every_crew_description_starts_with_the_same_prefix_it_hashes():
 
     task = _task()
     cases = [
+        ("implementer", build_implementer_crew("001-example-app", task, round_no=1)),
+        ("auditor", build_auditor_crew("001-example-app", task, "GATE EVIDENCE")),
         ("step", build_step_crew("001-example-app", task, "Edit `app/scoring.py`.", 1, 2)),
         ("senior_step", build_senior_step_crew("001-example-app", task, "Edit `app/scoring.py`.", 1, 2, "boom")),
         ("fix", build_fix_crew("001-example-app", task, "pytest exit=1")),
@@ -155,6 +195,8 @@ def test_agent_roles_stay_what_the_flow_expects():
     assert prompts.agent_copy(backend, "senior_step")["role"] == "Senior Developer"
     assert prompts.agent_copy(None, "qa")["role"] == "QA Gatekeeper"
     assert prompts.agent_copy(backend, "verifier")["role"] == "Scenario Verifier"
+    assert prompts.agent_copy(backend, "implementer")["role"] == "Implementer"
+    assert prompts.agent_copy(backend, "auditor")["role"] == "Auditor"
 
 
 def test_coder_backstory_says_qa_owns_the_gates_once():

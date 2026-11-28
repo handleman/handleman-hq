@@ -37,7 +37,7 @@ except ImportError:  # python-dotenv is optional for the unit tests
 
 # Roles that the crew actually instantiates (zen fallback is Phase 1 / T13).
 # 047: the role list lives in swarm.model_config (the one table).
-from swarm.model_config import FALLBACK_VARS, OPTIONAL_ROLE_VARS, ROLE_VARS
+from swarm.model_config import FALLBACK_VARS, OPTIONAL_ROLE_VARS, ROLE_VARS, ROLES
 
 GATE_BINARIES = ("pytest", "ruff", "mypy")
 
@@ -264,6 +264,10 @@ ROLE_FACTORIES: tuple[tuple[str, str], ...] = (
     ("reviewer", "reviewer"),
     ("senior", "senior"),
     ("verifier", "verifier"),
+    # 061: v2 aliases; their factories resolve the compat id when unset.
+    ("implementer", "implementer"),
+    ("auditor", "auditor"),
+    ("escalation", "escalation"),
 )
 
 
@@ -277,6 +281,10 @@ def factories() -> dict[str, Callable[[], Any]]:
         "reviewer": llms.reviewer_llm,
         "senior": llms.senior_llm,
         "verifier": llms.verifier_llm,
+        # 061: v2 aliases (compat-resolved when their own id is unset).
+        "implementer": llms.implementer_llm,
+        "auditor": llms.auditor_llm,
+        "escalation": lambda: llms.implementer_llm(escalated=True),
     }
 
 
@@ -722,7 +730,15 @@ def main() -> int:
 
     for var in ROLE_VARS + OPTIONAL_ROLE_VARS:
         model = os.getenv(var, "")
-        shown = model or ("<senior model>" if var in OPTIONAL_ROLE_VARS else "<missing>")
+        spec = next((r for r in ROLES if r.model_var == var), None)
+        if model:
+            shown = model
+        elif spec and spec.compat:
+            shown = f"<default: {spec.compat[0]}>"
+        elif var in OPTIONAL_ROLE_VARS:
+            shown = "<senior model>"
+        else:
+            shown = "<missing>"
         print(f"{var:<24} {shown:<58} {provider(model) if model else '-'}")
 
     # Reuse the crews' factories so a broken factory (not just a broken id) is

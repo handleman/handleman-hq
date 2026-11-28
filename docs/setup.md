@@ -55,13 +55,19 @@ model** — the cheapest tier belongs on mechanical work.
 
 | Role | Model | $/M in–out | Fallback | $/M in–out |
 | --- | --- | --- | --- | --- |
-| Planner | `opencode-go/glm-5.3-flash` | 0.15–0.50 | `mimo-v2.6-flash` | 0.14–0.28 |
-| Coder | `opencode-go/glm-5.3-flash` | 0.15–0.50 | `mimo-v2.6-flash` | 0.14–0.28 |
-| Reviewer / QA | `opencode-go/qwen3.8-flash` | 0.15–0.47 | `mimo-v2.6-flash` | 0.14–0.28 |
-| Verifier | `opencode-go/qwen3.8-flash` | 0.15–0.47 | `mimo-v2.6-flash` | 0.14–0.28 |
-| Senior (escalation) | `opencode-go/deepseek-v4-pro` | 0.66–1.98 (2× peak) | `kimi-k2.7-code` | 0.95–4.00 |
+| Implementer | `opencode-go/glm-5.3-flash` | 0.15–0.50 | `mimo-v2.6-flash` | 0.14–0.28 |
+| Implementer (escalation) | `opencode-go/deepseek-v4-pro` | 0.66–1.98 (2× peak) | `kimi-k2.7-code` | 0.95–4.00 |
+| Auditor | `opencode-go/qwen3.8-flash` | 0.15–0.47 | `mimo-v2.6-flash` | 0.14–0.28 |
 | Visual QA / acceptance (042/043) | `opencode-go/hy4-flash-free` | 0–0 | `claude-haiku-5-5` | 0.10–0.50 |
-| Conflict resolver | the coder model | — | `mimo-v2.6-flash` | 0.14–0.28 |
+| Conflict resolver | the implementer model | — | `mimo-v2.6-flash` | 0.14–0.28 |
+
+The v1 ids (`SWARM_PLANNER_MODEL`, `SWARM_CODER_MODEL`, `SWARM_REVIEWER_MODEL`,
+`SWARM_SENIOR_MODEL`, `SWARM_VERIFIER_MODEL`) still work: v2's implementer
+inherits the coder id, the auditor the verifier/reviewer/senior brain, and the
+escalation tier the senior id. Set `SWARM_IMPLEMENTER_MODEL`,
+`SWARM_AUDITOR_MODEL` and `SWARM_ESCALATION_MODEL` (and their `_FALLBACK_MODEL`
+pairs) only when you want a different id from the v1 role. Preflight validates
+whichever ids are set, so a typo fails before the first call.
 
 Why this split: the coder writes most tokens, so it keeps the flash tier with the
 best measured green rate in this repo (`glm-5.3-flash`: 111–271 s and
@@ -240,3 +246,28 @@ of the app's 180 coding, 47 e2e and 15 visual runs) is in
 [`specs/harness/060-task-budgets/evidence.md`](../specs/harness/060-task-budgets/evidence.md).
 Override with `SWARM_E2E_CAP_MULTIPLIER` / `SWARM_VISUAL_CAP_MULTIPLIER` (floor
 1.0); `run.json.budget.profile` and `cap_multiplier` record what ran.
+
+### Swarm v2 (061)
+
+v2 is the default: one whole-task implementer, deterministic harness gates, one
+read-only auditor. The knobs are:
+
+| Env | Default | Job |
+| --- | --- | --- |
+| `SWARM_FLOW_V2` | `1` | `0/false/no/off` runs the v1 planner/QA/verifier sequence |
+| `SWARM_V2_MAX_ROUNDS` | `3` | implementer rounds before `needs_human` |
+| `SWARM_V2_MAX_ITER` | `30` | tool-call budget for one implementer round |
+| `SWARM_V2_AUDITOR_MAX_ITER` | `10` | tool-call budget for the auditor |
+| `SWARM_V2_CREW_TIMEOUT_SECONDS` | `900` | hard cap for one implementer/auditor crew call |
+| `SWARM_IMPLEMENTER_MODEL` | coder id | primary implementer tier |
+| `SWARM_ESCALATION_MODEL` | senior id | tier used from round 2 |
+| `SWARM_AUDITOR_MODEL` | verifier/reviewer/senior | the judgement model |
+
+`run.json.flow` records `version`, the implementer rounds/escalations and the
+auditor verdicts. Usage is attributed to `implementer`,
+`implementer:escalation` and `auditor`, so the dashboard and `hq report` can
+compare the tiers. v2 has no per-step checkpoint: a killed v2 task restarts from
+its first round (the done ledger and the delta guard still prevent a false
+green). The design and evidence are in
+[`specs/harness/061-swarm-v2/`](../specs/harness/061-swarm-v2/) and
+[ADR 0005](adr/0005-one-implementer-one-auditor.md).

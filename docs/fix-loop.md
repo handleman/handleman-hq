@@ -1,5 +1,10 @@
 # The fix loop (021)
 
+> **v2 note (061):** the default flow has no QA→coder loop. One implementer owns
+> the whole task; a rejected round feeds the same prompt on the escalation tier,
+> and one auditor judges the harness-recorded gates. This page documents the v1
+> loop, still used with `SWARM_FLOW_V2=0`.
+
 > Part of the swarm harness documentation. Start at [`../README.md`](../README.md).
 
 ## Tests-first (021 T4, opt-in A/B)
