@@ -55,10 +55,11 @@ model** — the cheapest tier belongs on mechanical work.
 
 | Role | Model | $/M in–out | Fallback | $/M in–out |
 | --- | --- | --- | --- | --- |
-| Implementer | `opencode-go/glm-5.3-flash` | 0.15–0.50 | `mimo-v2.6-flash` | 0.14–0.28 |
-| Implementer (escalation) | `opencode-go/deepseek-v4-pro` | 0.66–1.98 (2× peak) | `kimi-k2.7-code` | 0.95–4.00 |
+| Implementer | `opencode-go/kimi-k2.7-code` | 0.95–4.00 | `glm-5.3-flash` | 0.15–0.50 |
+| Implementer (escalation) | `opencode-go/kimi-k3` | 3.00–15.00 | `deepseek-v4-pro` | 1.32–3.96 |
 | Auditor | `opencode-go/qwen3.8-flash` | 0.15–0.47 | `mimo-v2.6-flash` | 0.14–0.28 |
-| Visual QA / acceptance (042/043) | `opencode-go/gemini-4-argon` | 2.00–10.00 | `claude-haiku-5-5` | 0.10–0.50 |
+| Visual QA (042/043) | `opencode-go/kimi-k3` | 3.00–15.00 | `claude-haiku-5-5` | 0.10–0.50 |
+| Acceptance vision | `opencode-go/gemini-4-argon` | 2.00–10.00 | `claude-haiku-5-5` | 0.10–0.50 |
 | Conflict resolver | the implementer model | — | `mimo-v2.6-flash` | 0.14–0.28 |
 
 The v1 ids (`SWARM_PLANNER_MODEL`, `SWARM_CODER_MODEL`, `SWARM_REVIEWER_MODEL`,

@@ -137,10 +137,21 @@ profiles are unchanged and still the right shape for the expensive tail.
   round 2 on deepseek-v4-pro, which landed `frontend/src/App.svelte`, and the
   auditor (qwen3.8-flash) passed. All gates green; one commit. Totals: **$2.03,
   2.53M tokens, 552 s, 133 LLM calls**, 2 implementer rounds / 1 escalation.
-  This is the first end-to-end proof of tiered escalation, and it changes the
+  This is the first end-to-end proof of tiered escalation. It also changes the
   cap picture: a full-task escalation is ~$2, not the v1 $0.03 median. The 060
   $3 coding cap is the right size for v2; the earlier $1 recommendation would
-  have stopped this green task. The e2e/visual 2× profile is still untested.
+  have stopped this green task.
+- **2026-11-28, 043 T2 (v2 then v1):** the builder-CSS task exposed a v2
+  weakness. The cheap implementer (glm-5.3-flash) spent 60 calls/868k tokens
+  reading and answered without a delta; the escalation round (deepseek-v4-pro)
+  ended in a CrewAI serialization error after 266 s; Gemini 4 Argon and Claude
+  Haiku 5.5 were rejected by the Go gateway's OpenAI-compatible tool schema
+  (`strict`/named participants). Retried on the v1 planner/coder: **green in
+  811 s, $0.61**, one file. Conclusion: v2 needs a tool-capable primary and a
+  fallback to v1 for small UI edits until the prompt/model routing is tuned; the
+  failed-call path is now a rejected round (0.8.1), not `crew_error`.
+- **2026-11-28, 043 T1 (v2): green in one round**, $0.11/682k tokens:
+  `GET /capabilities` + the Save-routes UI hiding. Model: glm-5.3-flash.
 
 ## Limits
 

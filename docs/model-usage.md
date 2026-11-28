@@ -14,7 +14,8 @@ model.**
 > (mechanical/high volume), escalation tier (strongest, rare) and auditor
 > (judgement). The planner/reviewer/verifier rows below describe the v1 rollback;
 > the rule and the evidence still apply: give the **auditor** a reasoning model
-> from a different family than the implementer.
+> from a different family than the implementer. Kimi K3/K2.7 are the
+> multimodal tool-callers; DeepSeek V4 Pro is text-only.
 
 The harness optimises **cost per green task**, not cost per token. A cheap model
 that writes code in 90 seconds is a bargain; a cheap model that blocks a correct
@@ -23,8 +24,8 @@ whole night. Those are not the same kind of purchase.
 
 | Role | Class | What it actually does | Model requirement |
 | --- | --- | --- | --- |
-| Implementer | mechanical (high volume) | owns the whole task: plans, writes code and tests | fast, strong at code, tool-calling; the bulk-token role |
-| Escalation tier | judgement (rare) | re-runs the implementer prompt after a rejected round | strongest available; rare, so cost is amortised |
+| Implementer | mechanical (high volume) | owns the whole task: plans, writes code and tests | Kimi K2.7 Code: tool-calling + vision + code, $0.95/$4 |
+| Escalation tier | judgement (rare) | re-runs the implementer prompt after a rejected round | Kimi K3 or DeepSeek V4 Pro; strongest available, rare |
 | **Auditor** | **judgement** | judges gates + delta + scenario in one pass | **reasoning**, long-context reading; different family from the implementer |
 | Conflict / stash resolver | mechanical | reconciles two known diffs | fast, code-aware |
 | Style/format fixes | mechanical | runs the linter and applies it | irrelevant (harness-driven) |
