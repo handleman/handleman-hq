@@ -62,6 +62,12 @@ model** — the cheapest tier belongs on mechanical work.
 | Acceptance vision | `opencode-go/gemini-4-argon` | 2.00–10.00 | `claude-haiku-5-5` | 0.10–0.50 |
 | Conflict resolver | the implementer model | — | `mimo-v2.6-flash` | 0.14–0.28 |
 
+**Tool roles cannot use the Gemini/Claude Go adapters.** They reject CrewAI's
+strict tool schema (`strict function schema` / named participants). Use Kimi
+K2.7/K3, GLM or DeepSeek for `SWARM_IMPLEMENTER_MODEL`, `SWARM_AUDITOR_MODEL`
+and `SWARM_ESCALATION_MODEL`; preflight rejects those adapters for a tool role.
+Gemini 4 Argon remains the vision-only acceptance reader.
+
 The v1 ids (`SWARM_PLANNER_MODEL`, `SWARM_CODER_MODEL`, `SWARM_REVIEWER_MODEL`,
 `SWARM_SENIOR_MODEL`, `SWARM_VERIFIER_MODEL`) still work: v2's implementer
 inherits the coder id, the auditor the verifier/reviewer/senior brain, and the

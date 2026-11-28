@@ -303,3 +303,19 @@ def test_a_failed_implementer_call_escalates_instead_of_crashing(monkeypatch):
     assert log["roles"] == ["implementer:escalation", "auditor"]
     assert fake.state.implementer["call_failures"] == 1
     assert fake.state.review_verdict == "pass"
+
+
+def test_crew_contract_errors_are_non_retryable():
+    """Gemini/Claude schema and unparseable CrewAI output must not be retried 3x."""
+    assert flow._crew_contract_error(
+        Exception(
+            "tools[0].function.strict: google cannot guarantee OpenAI strict function schema semantics"
+        )
+    )
+    assert flow._crew_contract_error(
+        Exception("anthropic-messages cannot preserve named conversation participants")
+    )
+    assert flow._crew_contract_error(
+        Exception("PydanticSerializationUnexpectedValue: output")
+    )
+    assert not flow._crew_contract_error(Exception("connection timed out"))

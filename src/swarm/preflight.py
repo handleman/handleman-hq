@@ -411,6 +411,27 @@ def check(
                 Problem(var, "uses OpenCode Go but OPENCODE_GO_API_KEY is empty")
             )
 
+    # 061 AC-5 / 062 reliability: these model adapters reject CrewAI's strict
+    # tool schema through the Go gateway (Gemini "strict functions", Claude
+    # "named conversation participants"). They are fine for the vision-only
+    # acceptance reader; they cannot be an implementer/auditor.
+    tool_roles = (
+        "SWARM_IMPLEMENTER_MODEL",
+        "SWARM_AUDITOR_MODEL",
+        "SWARM_ESCALATION_MODEL",
+    )
+    for var in tool_roles:
+        model = env.get(var, "").strip()
+        if model.startswith(("opencode-go/gemini", "opencode-go/claude")):
+            problems.append(
+                Problem(
+                    var,
+                    f"{model} rejects CrewAI strict tool schemas through the Go "
+                    "gateway; use kimi-k2.7-code, kimi-k3, glm-5.3-flash or "
+                    "deepseek-v4-pro for a tool role (Gemini/Claude stay vision-only)",
+                )
+            )
+
     # 1c. Provider registry (055 T3): the id must name a known prefix and carry
     # the credential that prefix needs; subscriptions point at the proxy route.
     from swarm import providers as _providers

@@ -442,3 +442,29 @@ def test_a_401_probe_is_reachable_not_a_problem():
         )
     ]
     assert not any("probe" in p for p in problems)
+
+
+def test_a_vision_only_adapter_is_rejected_for_a_tool_role():
+    """Gemini/Claude reject CrewAI strict tools; preflight must say so early."""
+    env = {
+        "SWARM_PLANNER_MODEL": "opencode-go/glm-5.3-flash",
+        "SWARM_CODER_MODEL": "opencode-go/glm-5.3-flash",
+        "SWARM_REVIEWER_MODEL": "opencode-go/qwen3.8-flash",
+        "SWARM_SENIOR_MODEL": "opencode-go/deepseek-v4-pro",
+        "SWARM_IMPLEMENTER_MODEL": "opencode-go/gemini-4-argon",
+        "SWARM_AUDITOR_MODEL": "opencode-go/claude-haiku-5-5",
+        "SWARM_ALLOW_PAID": "1",
+        "OPENCODE_GO_API_KEY": "k",
+    }
+    problems = preflight.check(env, offline=True)
+    checks = {p.check for p in problems}
+    assert "SWARM_IMPLEMENTER_MODEL" in checks
+    assert "SWARM_AUDITOR_MODEL" in checks
+
+    env["SWARM_IMPLEMENTER_MODEL"] = "opencode-go/kimi-k2.7-code"
+    env["SWARM_AUDITOR_MODEL"] = "opencode-go/qwen3.8-flash"
+    problems = preflight.check(env, offline=True)
+    assert not any(
+        p.check in {"SWARM_IMPLEMENTER_MODEL", "SWARM_AUDITOR_MODEL"}
+        for p in problems
+    )

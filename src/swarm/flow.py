@@ -250,6 +250,28 @@ def _is_quota_error(e: BaseException) -> bool:
     return is_quota_error(e)
 
 
+_CONTRACT_ERROR_TOKENS = (
+    "pydantic",
+    "serializ",
+    "strict function schema",
+    "named conversation participants",
+    "cannot preserve named",
+)
+
+
+def _crew_contract_error(e: BaseException) -> bool:
+    """A crew/provider schema failure that a retry cannot fix.
+
+    The Go gateway rejects some adapters' OpenAI tool schemas (Gemini's strict
+    functions, Claude's named participants), and CrewAI can fail to serialize
+    a tool-call output. Re-running the same 60-call crew three times only
+    multiplies the wait and the bill; the v2 loop treats this as a rejected
+    round and escalates instead.
+    """
+    text = f"{type(e).__name__}: {e}".lower()
+    return any(token in text for token in _CONTRACT_ERROR_TOKENS)
+
+
 def _role_provider(role: str) -> str:
     """Provider of the model a role would call right now (fallback aware, 047 AC-3).
 
@@ -3475,6 +3497,10 @@ class SwarmFlow(Flow[SwarmState]):
                     raise
                 except Exception as e:
                     last_err = e
+                    if _crew_contract_error(e):
+                        raise SystemExit(
+                            f"crew contract error in {role or 'crew'}: {e}"[:800]
+                        ) from e
                     if _is_quota_error(e):
                         # 026 AC-5: count the wall per provider. Before this, the
                         # run retried the walled model until the harness gave up
