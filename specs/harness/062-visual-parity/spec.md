@@ -78,18 +78,18 @@ for geometry.
 
 ## Acceptance Criteria
 
-- [ ] AC-1: **Similarity.** `evaluate_visual` fails a region below
+- [x] AC-1: **Similarity.** `evaluate_visual` fails a region below
   `min_similarity` (default 0.90) with the measured similarity, and passes at or
   above it; it handles region crops and masks deterministically.
-- [ ] AC-2: **Strict coverage.** `--strict` reports a design spec with no
+- [x] AC-2: **Strict coverage.** `--strict` reports a design spec with no
   `[[visual]]` entry as a config error; a spec with one runs the check.
-- [ ] AC-3: **Acceptance integration.** A low-similarity region makes the spec
+- [x] AC-3: **Acceptance integration.** A low-similarity region makes the spec
   FAIL and appears in `acceptance.md`; a missing baseline is a config/failure,
   not a skip; `run.json`/the report carries the similarity.
-- [ ] AC-4: **First regions.** 041 and 042 declare at least one mobile visual
+- [x] AC-4: **First regions.** 041 and 042 declare at least one mobile visual
   region (the sheet chrome; the builder header/summary for 042) and pass at
   >=90% against the Figma reference.
-- [ ] AC-5: **Verification.** Unit tests, the factory suite, ruff and
+- [x] AC-5: **Verification.** Unit tests, the factory suite, ruff and
   `factory-audit` are green; release 0.8.0; docs updated.
 
 ## Verification
