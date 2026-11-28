@@ -24,6 +24,7 @@
   gate evidence, PASS/escalation/block/un ground) and update role/prompt tests;
   run the factory suite, ruff and `factory-audit`; release 0.7.0 and update the
   app pin/install.
-- [ ] T9 (pilot): Run 042 T2–T4 through the queue on v2, record the comparison
-  in `specs/product/042-map-destination-build-flow/` and decide the cap follow-up
-  from the result.
+- [x] T9 (pilot): 042 T2/T3 green on v2; T4 (e2e) was operator-completed after
+the swarm e2e was unusable. The comparison is in `evidence.md`: the 060 caps
+stay (T2 cost $2.03; the proposed $1 coding cap is rejected), and v1 remains
+the fallback for small UI edits until v2 routing is tuned.
