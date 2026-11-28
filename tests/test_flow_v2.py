@@ -275,3 +275,31 @@ def test_v2_never_calls_the_planner_qa_or_verifier(monkeypatch):
     )
     _run(fake, monkeypatch)
     assert fake.state.review_verdict == "pass"
+
+
+def test_a_failed_implementer_call_escalates_instead_of_crashing(monkeypatch):
+    """A provider/tool-schema failure is a rejected round, not crew_error."""
+    log = {"roles": [], "crews": []}
+
+    class _FailFirst(_Flow):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.calls = 0
+
+        def _kickoff(self, build, *, role="", step=None, guard_budget=True):
+            self.calls += 1
+            if self.calls == 1:
+                raise SystemExit("provider rejected the tool schema")
+            return super()._kickoff(
+                build, role=role, step=step, guard_budget=guard_budget
+            )
+
+    fake = _FailFirst(
+        gates=[{"pytest -q": 0}],
+        outputs=["implemented", "VERDICT: PASS"],
+        log=log,
+    )
+    _run(fake, monkeypatch)
+    assert log["roles"] == ["implementer:escalation", "auditor"]
+    assert fake.state.implementer["call_failures"] == 1
+    assert fake.state.review_verdict == "pass"

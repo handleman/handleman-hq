@@ -6,7 +6,7 @@ free cloud, or all-local Ollama, chosen entirely by `.env` — and **repo-agnost
 — point it at any checkout with a `swarm.yaml`.
 
 ```bash
-pipx install "git+https://github.com/handleman/handleman-hq@v0.8.0"
+pipx install "git+https://github.com/handleman/handleman-hq@v0.8.1"
 cd your-repo
 hq init                           # writes a starter swarm.yaml
 hq preflight                      # every model id, fallback, key, gate and design cache

@@ -4342,17 +4342,41 @@ class SwarmFlow(Flow[SwarmState]):
                 + (f", {len(feedback)} chars of feedback" if feedback else ""),
                 flush=True,
             )
-            _, work_summary = self._kickoff(
-                lambda round_no=round_no, feedback=feedback, escalated=escalated: build_implementer_crew(
-                    self._spec_dir,
-                    task,
-                    round_no=round_no,
-                    feedback=feedback,
-                    escalated=escalated,
-                ),
-                role=role,
-                step=f"impl{round_no}",
-            )
+            try:
+                _, work_summary = self._kickoff(
+                    lambda round_no=round_no, feedback=feedback, escalated=escalated: build_implementer_crew(
+                        self._spec_dir,
+                        task,
+                        round_no=round_no,
+                        feedback=feedback,
+                        escalated=escalated,
+                    ),
+                    role=role,
+                    step=f"impl{round_no}",
+                )
+            except SystemExit as exc:
+                # A crew can fail after its own retries (a provider that rejects
+                # the tool schema, a serialisation error at the iteration cap).
+                # That is a rejected round, not a run-level crash: feed it to
+                # the escalation tier and stop cleanly on the last round.
+                implementer["call_failures"] = (
+                    int(implementer.get("call_failures") or 0) + 1
+                )
+                self.state.error = str(exc)[:2000]
+                feedback = (
+                    "The previous implementer call failed before it could land a "
+                    f"change: {exc}. Use `Repo Edit` with a small unique anchor "
+                    "(or `Repo Create` for a new file), then prove the write with "
+                    "`git diff --stat`."
+                )
+                if round_no >= rounds:
+                    self.state.result = feedback[:4000]
+                    break
+                print(
+                    f"v2: implementer call failed in round {round_no} → escalating",
+                    flush=True,
+                )
+                continue
             self.state.dev_attempts = round_no
             changed = self._in_scope_paths(run_delta(self._baseline))
             if _guards.enabled():
