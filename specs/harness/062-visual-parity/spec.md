@@ -97,3 +97,9 @@ for geometry.
 `pytest tests/test_design.py tests/test_acceptance.py`, the factory suite, ruff
 and `factory-audit`; `make swarm-accept --strict` on 041/042 with the design
 cache synced; a deliberately unstyled builder must fail the visual region.
+
+**Verified (2026-11-28):** the app's full strict pass is 17 specs, all built
+specs PASS, 0 failures; 041 and 042 declare visual regions at 0.90 and pass;
+042's e2e writes the builder/route/spinner screenshots. The first live
+comparison also exposed an unstyled **Build route** CTA and a spinner hidden
+under the top card, which the gate/visual review caught and the app fixed.
