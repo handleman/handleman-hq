@@ -1156,6 +1156,20 @@ def run(
                         "ac": "AC-D",
                     }
                 ]
+            # 062: rendered parity against the Figma reference, by region.
+            report.design_issues.extend(
+                _design_checks.evaluate_visual(
+                    table, browser.get("shots") or {}, root=root
+                )
+            )
+            if (
+                os.getenv(STRICT_ENV, "0") == "1"
+                and (table.get("figma") or table.get("region"))
+                and not table.get("visual")
+            ):
+                report.config_errors.append(
+                    f"design {spec_dir.name}: no [[visual]] check (062 AC-2)"
+                )
         covered = (
             {check.ac for check in report.checks}
             | set(report.not_applicable)

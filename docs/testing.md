@@ -155,3 +155,13 @@ The acceptance report shows the AC as **E2E**, the strict pass treats it as
 covered, and the run validates that the test file exists under the target root.
 The e2e suite is still the gate that executes it; the declaration only makes the
 oracle honest and addressable.
+
+### Visual parity (062)
+
+A design spec also declares one or more `[[visual]]` regions in `design.toml`
+with a Figma reference render and `min_similarity` (default 0.90). The strict
+pass compares the rendered screenshot (or an e2e artifact named by `actual`) by
+region, excludes the map, and fails `design_visual` below the threshold. A
+design table with no visual region is a strict config error. The 042 upload is
+the reason: tokens and rects were green while the Build route pill was unstyled.
+

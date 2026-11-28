@@ -31,6 +31,10 @@ PRICES_USD_PER_M: dict[str, tuple[float, float]] = {
     "opencode-go/mimo-v2.6-flash": (0.14, 0.28),
     "opencode-go/deepseek-v4-pro": (1.32, 3.96),
     "opencode-go/claude-haiku-5-5": (0.10, 0.50),
+    # 063 visual/acceptance models read from the Go catalogue (2026-11-28).
+    "opencode-go/gemini-4-argon": (2.00, 10.00),
+    "opencode-go/gpt-6-luna": (0.10, 0.50),
+    "opencode-go/kimi-k3": (3.00, 15.00),
     "opencode-go/hy4-flash-free": (0.0, 0.0),
     # OpenRouter list price (2026-11-14). The planner uses this id because the
     # free Nvidia planner 503s on its safety screener; an unknown price would

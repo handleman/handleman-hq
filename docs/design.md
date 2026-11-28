@@ -115,6 +115,12 @@ An expired token refreshes silently; an invalid refresh drops it and re-prompts.
   budget and a per-node cache; write/canvas tools are never exposed.
 - The acceptance runner collects computed CSS variables, region rects and
   screenshots for `design.toml` (`hq design verify` is the same evaluator).
+- **062 visual parity:** a `[[visual]]` entry compares the rendered screenshot
+  (or an explicit `actual` artifact from the e2e) with a Figma reference render
+  by region and fails below `min_similarity` (default **0.90**). The token/rect
+  checks cannot see an unstyled button; this can. A `--strict` design spec with
+  a `[[figma]]`/`[[region]]` table and no `[[visual]]` entry is a config error.
+  Map tiles are excluded by the region or a `mask`.
 - `run.json.design` records file/nodes/transport/sync status.
 
 ## Security

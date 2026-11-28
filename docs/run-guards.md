@@ -113,3 +113,11 @@ cheap answer is almost always available before a judge is paid:
   `ungrounded_block` without another paid round. `SWARM_FLOW_V2=0` restores the
   v1 sequence for the pilot's rollback; `run.json.flow` records the version,
   rounds, escalations and auditor verdicts.
+
+- **Visual parity, not just tokens** (062): a design spec can declare
+  `[[visual]]` regions in `design.toml` with a Figma reference render and
+  `min_similarity` (default **0.90**). The acceptance compares the rendered
+  screenshot (or an e2e `actual` artifact) by region, excludes the map, and
+  fails `design_visual` below the threshold. `--strict` requires at least one
+  visual region for a design table. Tokens and rects prove the variables; this
+  proves the surface (042's unstyled Build route CTA passed the old checks).

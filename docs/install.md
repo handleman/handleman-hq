@@ -16,19 +16,19 @@ a `.env`, and its own tests. You do **not** copy `src/swarm/` into the app.
 Recommended (isolated, global `hq`):
 
 ```bash
-pipx install "git+https://github.com/handleman/handleman-hq@v0.7.1"
-hq --version        # hq 0.7.1
+pipx install "git+https://github.com/handleman/handleman-hq@v0.8.0"
+hq --version        # hq 0.8.0
 ```
 
 Or in its own venv:
 
 ```bash
 python3.12 -m venv ~/.venvs/hq
-~/.venvs/hq/bin/pip install "git+https://github.com/handleman/handleman-hq@v0.7.1"
+~/.venvs/hq/bin/pip install "git+https://github.com/handleman/handleman-hq@v0.8.0"
 ~/.venvs/hq/bin/hq --version
 ```
 
-Add the dev tools for a source checkout: `"handleman-hq[dev] @ git+https://…@v0.7.1"`.
+Add the dev tools for a source checkout: `"handleman-hq[dev] @ git+https://…@v0.8.0"`.
 The package is currently installed from the tagged GitHub release; use a newer
 tag when upgrading.
 
@@ -102,8 +102,8 @@ prints an authorization URL, waits for the loopback callback, stores the token
 ## Upgrade
 
 ```bash
-pipx install --force "git+https://github.com/handleman/handleman-hq@v0.7.1"
-# or: ~/.venvs/hq/bin/pip install -U "git+https://…@v0.7.1"
+pipx install --force "git+https://github.com/handleman/handleman-hq@v0.8.0"
+# or: ~/.venvs/hq/bin/pip install -U "git+https://…@v0.8.0"
 hq --version
 ```
 

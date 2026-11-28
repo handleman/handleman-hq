@@ -352,3 +352,128 @@ def test_design_tokens_compare_colours_semantically():
     assert checks.evaluate(
         table, {"tokens": {"--bg": "rgb(255, 255, 255)"}}, root=Path(".")
     ) == []
+
+
+# ---- 062: visual parity ----
+
+
+def _images(tmp_path, *, actual_colour=(255, 255, 255), baseline_colour=(255, 255, 255)):
+    from PIL import Image
+
+    actual = tmp_path / "actual.png"
+    baseline = tmp_path / "baseline.png"
+    Image.new("RGB", (100, 100), actual_colour).save(actual)
+    Image.new("RGB", (100, 100), baseline_colour).save(baseline)
+    return actual, baseline
+
+
+def test_visual_parity_passes_identical_regions(tmp_path):
+    actual, _baseline = _images(tmp_path)
+    table = {
+        "visual": [
+            {
+                "frame": "mobile",
+                "baseline": "baseline.png",
+                "x": 0,
+                "y": 0,
+                "w": 100,
+                "h": 100,
+                "ac": "AC-1",
+            }
+        ]
+    }
+    assert checks.evaluate_visual(table, {"mobile": str(actual)}, root=tmp_path) == []
+
+
+def test_visual_parity_fails_below_ninety_percent(tmp_path):
+    actual, _baseline = _images(tmp_path, baseline_colour=(0, 0, 0))
+    table = {
+        "visual": [
+            {
+                "frame": "mobile",
+                "baseline": "baseline.png",
+                "min_similarity": 0.90,
+                "ac": "AC-2",
+            }
+        ]
+    }
+    issues = checks.evaluate_visual(table, {"mobile": str(actual)}, root=tmp_path)
+    assert len(issues) == 1
+    assert issues[0]["check"] == "design_visual"
+    assert "similarity 0.0%" in issues[0]["detail"]
+    assert issues[0]["similarity"] == 0.0
+
+
+def test_visual_parity_region_ignores_differences_outside(tmp_path):
+    from PIL import Image
+
+    actual = tmp_path / "actual.png"
+    baseline = tmp_path / "baseline.png"
+    Image.new("RGB", (100, 100), (255, 255, 255)).save(actual)
+    image = Image.new("RGB", (100, 100), (255, 255, 255))
+    for x in range(50):
+        for y in range(100):
+            image.putpixel((x, y), (0, 0, 0))
+    image.save(baseline)
+    table = {
+        "visual": [
+            {
+                "frame": "mobile",
+                "baseline": "baseline.png",
+                "x": 50,
+                "y": 0,
+                "w": 50,
+                "h": 100,
+                "ac": "AC-3",
+            }
+        ]
+    }
+    assert checks.evaluate_visual(table, {"mobile": str(actual)}, root=tmp_path) == []
+
+
+def test_visual_parity_mask_ignores_a_known_difference(tmp_path):
+    actual, _baseline = _images(tmp_path, baseline_colour=(0, 0, 0))
+    table = {
+        "visual": [
+            {
+                "frame": "mobile",
+                "baseline": "baseline.png",
+                "mask": [{"x": 0, "y": 0, "w": 100, "h": 100}],
+                "ac": "AC-4",
+            }
+        ]
+    }
+    assert checks.evaluate_visual(table, {"mobile": str(actual)}, root=tmp_path) == []
+
+
+def test_visual_parity_missing_baseline_is_a_failure(tmp_path):
+    actual, _ = _images(tmp_path)
+    table = {
+        "visual": [
+            {"frame": "mobile", "baseline": "missing.png", "ac": "AC-5"}
+        ]
+    }
+    issues = checks.evaluate_visual(table, {"mobile": str(actual)}, root=tmp_path)
+    assert issues and "baseline missing" in issues[0]["detail"]
+
+
+def test_strict_requires_a_visual_check_for_a_design_spec():
+    from swarm.drivers.acceptance import SpecReport
+
+    # The acceptance path appends this config error under SWARM_ACCEPT_STRICT;
+    # the unit-level contract is that a figma/region table without `visual` is
+    # visible to the strict verdict.
+    report = SpecReport(spec="x", title="x", criteria=[], checks=[])
+    report.ac_verdicts["AC-1"] = {"verdict": "pass"}
+    report.config_errors = ["design x: no [[visual]] check (062 AC-2)"]
+    import os
+
+    previous = os.environ.get("SWARM_ACCEPT_STRICT")
+    os.environ["SWARM_ACCEPT_STRICT"] = "1"
+    try:
+        assert report.verdict == "FAIL"
+    finally:
+        if previous is None:
+            os.environ.pop("SWARM_ACCEPT_STRICT", None)
+        else:
+            os.environ["SWARM_ACCEPT_STRICT"] = previous

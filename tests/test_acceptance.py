@@ -697,3 +697,61 @@ def test_covered_by_missing_test_is_a_config_error(tmp_path, monkeypatch):
         commit=False,
     )
     assert any("test not found" in err for err in result.reports[0].config_errors)
+
+
+def test_a_low_similarity_visual_region_fails_the_spec(tmp_path, monkeypatch):
+    from PIL import Image
+
+    spec_dir = _design_spec(tmp_path)
+    (spec_dir / "design.toml").write_text(
+        '[figma]\nfile_key = "abc"\nnode = "1:2"\n\n'
+        '[[token]]\nname = "--bg"\nvalue = "#ffffff"\nac = "AC-1"\n\n'
+        '[[visual]]\nframe = "mobile"\nbaseline = "baseline.png"\n'
+        'min_similarity = 0.90\nac = "AC-1"\n'
+    )
+    Image.new("RGB", (100, 100), (255, 255, 255)).save(tmp_path / "baseline.png")
+    actual = tmp_path / "actual.png"
+    Image.new("RGB", (100, 100), (0, 0, 0)).save(actual)
+
+    def fake(plan):
+        return {
+            "shots": {"mobile": str(actual)},
+            "views": {
+                "mobile": {
+                    "leaflet": True,
+                    "tiles": 3,
+                    "duplicateButtons": [],
+                    "zeroSize": 0,
+                    "overflow": False,
+                    "consoleErrors": [],
+                    "routeRequests": 0,
+                }
+            },
+            "checks": [{"spec": spec_dir.name, "ac": "AC-1", "ok": True, "detail": "exists"}],
+            "design": {
+                spec_dir.name: {
+                    "desktop": {
+                        "tokens": {"--bg": "#ffffff"},
+                        "regions": {},
+                        "screenshots": {},
+                    }
+                }
+            },
+        }
+
+    monkeypatch.setattr("swarm.drivers.acceptance.built_product_specs", lambda repo: [spec_dir])
+    result = run(
+        repo=tmp_path,
+        queue=False,
+        build=False,
+        base_url="http://x/",
+        browser_runner=fake,
+        commit=False,
+    )
+    assert result.verdict == "FAIL"
+    assert any(
+        issue.get("check") == "design_visual"
+        for issue in result.reports[0].design_issues
+    )
+    report = (spec_dir / "acceptance.md").read_text()
+    assert "design_visual" in report

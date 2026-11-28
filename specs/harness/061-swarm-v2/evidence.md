@@ -113,6 +113,14 @@ The recommendation is recorded, not implemented: it needs its own spec and a
 decision about the total 4 h budget. The pilot runs on the 060 caps so a v2
 result is comparable with the v1 corpus.
 
+**Pilot correction:** the first v2 green task (042 T2) cost **$2.03** and 2.53M
+tokens, because the primary tier landed nothing and the escalation tier did the
+work. A $1 coding cap would have stopped it. v2's full-task escalation is a
+different distribution from v1's micro-step crews, so the cap decision needs v2
+data (T3/T4 and more tasks), not the v1 p90. Keep 060 until that sample exists;
+the candidates are the current $3 or a v2-specific cap. The e2e/visual 2×
+profiles are unchanged and still the right shape for the expensive tail.
+
 ## Pilot log
 
 - **2026-11-28, 042 T2 (v0.7.0):** first v2 run, `needs_human` / `no_delta`.
@@ -124,6 +132,15 @@ result is comparable with the v1 corpus.
   `no_delta`); the implementer is told to land early, retry a non-unique
   `Repo Edit`, and prove the write with `git diff --stat`; the iteration budget
   is 60. The same task is the re-run.
+- **2026-11-28, 042 T2 (v0.7.1): green.** Round 1 (glm-5.3-flash) again landed
+  nothing and cost $0.16 / 1.03M prompt tokens; the no-delta feedback then ran
+  round 2 on deepseek-v4-pro, which landed `frontend/src/App.svelte`, and the
+  auditor (qwen3.8-flash) passed. All gates green; one commit. Totals: **$2.03,
+  2.53M tokens, 552 s, 133 LLM calls**, 2 implementer rounds / 1 escalation.
+  This is the first end-to-end proof of tiered escalation, and it changes the
+  cap picture: a full-task escalation is ~$2, not the v1 $0.03 median. The 060
+  $3 coding cap is the right size for v2; the earlier $1 recommendation would
+  have stopped this green task. The e2e/visual 2× profile is still untested.
 
 ## Limits
 
