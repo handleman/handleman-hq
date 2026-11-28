@@ -136,6 +136,9 @@ class _Flow:
 
         return report_text(self._qa_report(gates, transcript, changed, missing))
 
+    def _v2_delta_feedback(self, record):
+        return flow.SwarmFlow._v2_delta_feedback(self, record)
+
     def _record_gate_selection(self, *args):
         self.gate_selections.append(args)
 
@@ -216,6 +219,30 @@ def test_a_red_round_escalates_the_model_tier_and_a_grounded_block_retries(monke
     assert fake.state.review_verdict == "pass"
     # The first implementer is the cheap tier; every later one is escalation.
     assert log["crews"][0].agents[0].llm.model != log["crews"][1].agents[0].llm.model
+
+
+def test_a_no_delta_round_escalates_instead_of_stopping(monkeypatch):
+    """042-T2: the first v2 pilot claimed a landing with an empty delta."""
+    log = {"roles": [], "crews": []}
+    fake = _Flow(
+        gates=[{"pytest -q": 0}],
+        outputs=["I landed everything", "implemented", "VERDICT: PASS"],
+        log=log,
+    )
+    calls = {"n": 0}
+
+    def record(brief, changed, root):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return {"reason": "no_delta", "changed": [], "named": ["App.svelte"], "missing": []}
+        return {"reason": "", "changed": ["app/x.py"], "named": [], "missing": []}
+
+    monkeypatch.setenv("SWARM_DELTA_GUARD", "1")
+    monkeypatch.setattr("swarm.guards.delta_record", record)
+    _run(fake, monkeypatch)
+    assert log["roles"] == ["implementer", "implementer:escalation", "auditor"]
+    assert fake.state.implementer["no_delta_rounds"] == 1
+    assert fake.state.review_verdict == "pass"
 
 
 def test_an_ungrounded_block_stops_without_another_paid_round(monkeypatch):

@@ -256,7 +256,7 @@ read-only auditor. The knobs are:
 | --- | --- | --- |
 | `SWARM_FLOW_V2` | `1` | `0/false/no/off` runs the v1 planner/QA/verifier sequence |
 | `SWARM_V2_MAX_ROUNDS` | `3` | implementer rounds before `needs_human` |
-| `SWARM_V2_MAX_ITER` | `30` | tool-call budget for one implementer round |
+| `SWARM_V2_MAX_ITER` | `60` | tool-call budget for one implementer round |
 | `SWARM_V2_AUDITOR_MAX_ITER` | `10` | tool-call budget for the auditor |
 | `SWARM_V2_CREW_TIMEOUT_SECONDS` | `900` | hard cap for one implementer/auditor crew call |
 | `SWARM_IMPLEMENTER_MODEL` | coder id | primary implementer tier |

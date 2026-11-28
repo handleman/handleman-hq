@@ -30,7 +30,8 @@
 6. **The loop.** `_run_crew_v2(task, kickoff)`:
    - one implementer round per attempt, `implementer` then
      `implementer:escalation`;
-   - delta guard with the same typed `_DeltaStop`;
+   - delta guard: an empty delta is a rejected round (fed back, escalation
+     tier) until the last round, then the typed `_DeltaStop`;
    - `_v2_gate_run`; if required, `_run_e2e_deterministically` and treat a red
      suite as a red round;
    - when all gates pass, one auditor crew; parse `reviewer_verdict`; PASS ends;

@@ -4181,6 +4181,10 @@ class SwarmFlow(Flow[SwarmState]):
                 gates, transcript, missing = self._gate_evidence(
                     changed_now, agents=("Harness Gatekeeper",)
                 )
+            # A gate with no recorded execution is red, not absent: `_gates_green`
+            # only looks at values, so a missing command must not vanish.
+            for command in missing:
+                gates.setdefault(command, 99)
             return changed_now, gates, transcript, missing
 
         self._pre_qa_style()
@@ -4244,6 +4248,36 @@ class SwarmFlow(Flow[SwarmState]):
             + "\n\nSCENARIO CONTEXT (delta files, referenced ACs, connections):\n"
             + render_context(context)
         )
+
+    def _v2_delta_feedback(self, record: dict[str, Any]) -> str:
+        """The retry message for a round that landed nothing.
+
+        The model's final answer is not evidence: 042-T2 (2026-11-28) claimed
+        "everything is landed in App.svelte" after 31 calls with an empty delta.
+        The next round must be told exactly what the harness saw and how to
+        prove the write.
+        """
+        changed = record.get("changed") or []
+        named = record.get("named") or []
+        missing = record.get("missing") or []
+        lines = [
+            "The previous round produced NO in-scope change: `git diff` is empty.",
+            f"Changed files the harness saw: {', '.join(changed) or '(none)'}.",
+        ]
+        if named:
+            lines.append("Files named by the brief: " + ", ".join(named) + ".")
+        if missing:
+            lines.append("Named files still absent: " + ", ".join(missing) + ".")
+        lines += [
+            (
+                "A summary in your answer is not a landed change. Open the target file, "
+                "find its exact current text, and use `Repo Edit` (or `Repo Create` for a "
+                "new file) now. If a tool returns BLOCKED or no-match, re-read the exact "
+                "range and retry. Before you answer, run `git diff --stat` with Guarded "
+                "Shell and do not finish until your file is listed."
+            ),
+        ]
+        return "\n".join(lines)
 
     def _run_crew_v2(self, task: Any) -> str:
         """061: whole-task implementer → deterministic gates → one auditor.
@@ -4326,7 +4360,20 @@ class SwarmFlow(Flow[SwarmState]):
                 self.state.delta_guard = record
                 print(_guards.summary(record), flush=True)
                 if record["reason"]:
-                    raise _DeltaStop(str(record["reason"]), record)
+                    implementer["no_delta_rounds"] = (
+                        int(implementer.get("no_delta_rounds") or 0) + 1
+                    )
+                    # A no-delta round is exactly what the escalation tier is
+                    # for: feed back what the harness saw and try the stronger
+                    # model. The last round still stops with `no_delta`.
+                    if round_no >= rounds:
+                        raise _DeltaStop(str(record["reason"]), record)
+                    feedback = self._v2_delta_feedback(record)
+                    print(
+                        f"v2: no delta in round {round_no} → escalating",
+                        flush=True,
+                    )
+                    continue
             if self._revert_out_of_scope(run_delta(self._baseline)):
                 changed = self._in_scope_paths(run_delta(self._baseline))
             self.state.changed_files = list(changed)

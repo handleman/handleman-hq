@@ -68,10 +68,12 @@ edits; corrections after a block are the implementer's next round.
    configured e2e driver and records it before the audit.
 4. When every gate is green, the auditor runs once over the gate transcript,
    the delta and the scenario context. `PASS` + green gates ends the loop.
-5. A red round (gate, e2e or grounded audit block) becomes the next
+5. A red round (gate, e2e, empty delta or grounded audit block) becomes the next
    implementer's feedback. Round 2 and later run on the escalation model tier.
    The loop stops at `SWARM_V2_MAX_ROUNDS` (default 3), on no progress, on an
-   ungrounded audit block, or on any typed budget/wall stop.
+   ungrounded audit block, or on any typed budget/wall stop. A `no_delta` round
+   is retried on the escalation tier (up to the last round) instead of ending the
+   task immediately.
 6. `save_run` re-checks the gate evidence at the final delta exactly as v1 did.
    Green still means evidence (ADR 0002).
 
@@ -115,35 +117,35 @@ but does not change the caps.
 
 ## Acceptance Criteria
 
-- [ ] AC-1: **Selection & compatibility.** `SwarmFlow` runs v2 by default and
+- [x] AC-1: **Selection & compatibility.** `SwarmFlow` runs v2 by default and
   v1 when `SWARM_FLOW_V2` is `0/false/no/off`; `run.json.flow.version` records
   the selected flow. Existing `.env` files with only the v1 ids still resolve
   implementer/auditor/escalation models (new ids win when set), and preflight
   validates every v2 id and fallback that is set.
-- [ ] AC-2: **Whole-task implementer.** One implementer crew receives the full
+- [x] AC-2: **Whole-task implementer.** One implementer crew receives the full
   brief, referenced ACs, plan lines and design brief; it has read/search/create/
   edit/shell tools and no per-step planner call. A retry reuses the same builder
   with the previous round's gate/audit feedback. Usage is recorded under
   `implementer` / `implementer:escalation`.
-- [ ] AC-3: **Deterministic gates.** After every implementer round the harness
+- [x] AC-3: **Deterministic gates.** After every implementer round the harness
   runs every configured gate itself, records each execution in
   `shell_log.jsonl` under `Harness Gatekeeper`, and rejects stale/missing
   evidence. The final-delta evidence is re-checked at save time; a green run
   therefore needs no QA agent.
-- [ ] AC-4: **One auditor.** A read-only auditor judges the gate transcript, the
+- [x] AC-4: **One auditor.** A read-only auditor judges the gate transcript, the
   delta and the scenario against the brief/ACs, and returns
   `VERDICT: PASS|BLOCKED`. A BLOCKED verdict with no checkable citation is an
   ungrounded stop, not another paid round. No verifier or reviewer crew runs in
   v2.
-- [ ] AC-5: **Tiered escalation.** Round 1 uses the implementer model; from
+- [x] AC-5: **Tiered escalation.** Round 1 uses the implementer model; from
   round 2 the same implementer builder/prompt runs on the escalation model,
   bounded by `SWARM_V2_MAX_ROUNDS` (default 3) and by a no-progress check. No
   separate senior persona or crew is created.
-- [ ] AC-6: **Preserved guards.** Caps, wall budget, delta guard, scope revert,
+- [x] AC-6: **Preserved guards.** Caps, wall budget, delta guard, scope revert,
   e2e evidence (run before the audit when required), approval hold, acceptance
   pass and the optional visual phase behave as in v1; all typed stops still
   record `reason_code`.
-- [ ] AC-7: **Evidence & rollout docs.** `evidence.md` records the corpus,
+- [x] AC-7: **Evidence & rollout docs.** `evidence.md` records the corpus,
   hypothesis and the evidence-tuned cap recommendation; ADR 0005, the glossary,
   domain model, how-it-works, setup and run-guards describe v2 and the rollback.
 - [ ] AC-8: **Verification.** Unit/integration tests cover selection, model

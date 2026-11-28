@@ -296,7 +296,7 @@ def build_implementer_crew(
         tools=_tools(allow_gates=False, role=copy["role"]),
         verbose=False,
         max_retry_limit=AGENT_RETRY_LIMIT,
-        max_iter=_v2_iterations("SWARM_V2_MAX_ITER", 30),
+        max_iter=_v2_iterations("SWARM_V2_MAX_ITER", 60),
     )
     from swarm.tools_skills import inject_skill_into_agent
 

@@ -113,6 +113,18 @@ The recommendation is recorded, not implemented: it needs its own spec and a
 decision about the total 4 h budget. The pilot runs on the 060 caps so a v2
 result is comparable with the v1 corpus.
 
+## Pilot log
+
+- **2026-11-28, 042 T2 (v0.7.0):** first v2 run, `needs_human` / `no_delta`.
+  One implementer round, 31 LLM calls, 280k prompt tokens, $0.044, 98 s; it
+  read the tree and answered that everything was "landed in App.svelte" with an
+  empty git delta, and the delta guard stopped the task before the escalation
+  tier could run. Fixes in v0.7.1: a no-delta round now feeds back exactly what
+  the harness saw and retries on the escalation tier (the last round still stops
+  `no_delta`); the implementer is told to land early, retry a non-unique
+  `Repo Edit`, and prove the write with `git diff --stat`; the iteration budget
+  is 60. The same task is the re-run.
+
 ## Limits
 
 - The corpus is one target and one model profile (OpenCode Go); the role costs
